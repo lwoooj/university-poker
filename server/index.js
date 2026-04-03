@@ -8,7 +8,12 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Allows any origin to connect
+        methods: ["GET", "POST"]
+    }
+});
 
 app.use(express.static(path.join(__dirname, '..', 'client')));
 
