@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -12,7 +13,7 @@ app.use(express.static(path.join(__dirname, '..', 'client')));
 
 // --- 1. DATABASE CONFIGURATION ---
 // Connect to your MongoDB (Local or Atlas)
-const MONGO_URI = 'mongodb+srv://TravisTheAdmin:p02080706@pokercluster.28hnctg.mongodb.net/?appName=pokercluster'; 
+const MONGO_URI = process.env.MONGO_URI;
 mongoose.connect(MONGO_URI)
     .then(() => console.log("✅ MongoDB Connected Successfully"))
     .catch(err => console.error("❌ MongoDB Connection Error:", err));
