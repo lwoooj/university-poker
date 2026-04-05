@@ -9,20 +9,16 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const app = express();
 const server = http.createServer(app);
 
-// FIX: Added CORS for Render/Production stability
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 app.use(express.static(path.join(__dirname, '..', 'client')));
 
 const MONGO_URI = process.env.MONGO_URI;
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected Successfully"))
-    .catch(err => console.error("❌ MongoDB Connection Error:", err));
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch(err => console.error("❌ MongoDB Error:", err));
 
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
@@ -47,27 +43,9 @@ function createDeck() {
 function getHandScore(hand, community) {
     const fullHand = [...hand, ...community];
     const vCounts = {};
-    const sCounts = {};
-    fullHand.forEach(c => {
-        vCounts[c.value] = (vCounts[c.value] || 0) + 1;
-        sCounts[c.suit] = (sCounts[c.suit] || 0) + 1;
-    });
+    fullHand.forEach(c => { vCounts[c.value] = (vCounts[c.value] || 0) + 1; });
     const vSorted = Object.keys(vCounts).map(Number).sort((a, b) => b - a);
-    const isFlush = Object.values(sCounts).some(count => count >= 5);
-    let isStraight = false;
-    let straightHigh = 0;
-    for (let i = 0; i <= vSorted.length - 5; i++) {
-        if (vSorted[i] - vSorted[i+4] === 4) { isStraight = true; straightHigh = vSorted[i]; break; }
-    }
     const pairs = Object.entries(vCounts).filter(([v, c]) => c === 2).map(([v]) => Number(v)).sort((a,b)=>b-a);
-    const trips = Object.entries(vCounts).filter(([v, c]) => c === 3).map(([v]) => Number(v));
-    const quads = Object.entries(vCounts).filter(([v, c]) => c === 4).map(([v]) => Number(v));
-    if (isFlush && isStraight) return 800 + straightHigh;
-    if (quads.length) return 700 + quads[0];
-    if (trips.length && pairs.length) return 600 + trips[0];
-    if (isFlush) return 500 + vSorted[0];
-    if (isStraight) return 400 + straightHigh;
-    if (trips.length) return 300 + trips[0];
     if (pairs.length >= 2) return 200 + pairs[0];
     if (pairs.length === 1) return 100 + pairs[0];
     return vSorted[0];
@@ -76,10 +54,7 @@ function getHandScore(hand, community) {
 io.on('connection', (socket) => {
     socket.on('login', async (username) => {
         let user = await User.findOne({ username });
-        if (!user) {
-            user = new User({ username, bankroll: 10000 });
-            await user.save();
-        }
+        if (!user) { user = new User({ username, bankroll: 10000 }); await user.save(); }
         socket.username = username;
         socket.bankroll = user.bankroll;
         socket.emit('lobby-list', { 
@@ -91,58 +66,41 @@ io.on('connection', (socket) => {
     socket.on('create-room', () => {
         if (!socket.username) return;
         const roomId = "TABLE_" + Math.random().toString(36).substring(7).toUpperCase();
-        rooms[roomId] = {
-            players: {}, community: [], pot: 0, highBet: 0, order: [], turn: 0, phase: 0, status: "waiting", deck: []
-        };
+        rooms[roomId] = { players: {}, community: [], pot: 0, highBet: 0, order: [], turn: 0, phase: 0, status: "waiting", deck: [] };
         joinRoom(socket, roomId);
     });
 
     socket.on('join-room', (roomId) => {
         const room = rooms[roomId];
-        if (room && room.order.length < 6 && room.status === "waiting") {
-            joinRoom(socket, roomId);
-        }
+        if (room && room.order.length < 6 && room.status === "waiting") joinRoom(socket, roomId);
     });
 
     function joinRoom(socket, roomId) {
         socket.join(roomId);
         socket.roomId = roomId;
-        rooms[roomId].players[socket.id] = { 
-            username: socket.username,
-            cards: [], chips: socket.bankroll, bet: 0, folded: false, acted: false, last: "JOINED" 
-        };
+        rooms[roomId].players[socket.id] = { username: socket.username, cards: [], chips: socket.bankroll, bet: 0, folded: false, acted: false, last: "JOINED" };
         rooms[roomId].order.push(socket.id);
         io.to(roomId).emit('update', rooms[roomId]);
     }
 
     socket.on('start-game', async () => {
-        const roomId = socket.roomId;
-        if (!roomId || !rooms[roomId]) return;
-        const room = rooms[roomId];
-        if (room.order.length < 2) return;
-
+        const room = rooms[socket.roomId];
+        if (!room || room.order.length < 2) return;
         const ante = 100;
-        let canStart = true;
-        room.order.forEach(id => { if (room.players[id].chips < ante) canStart = false; });
-        if (!canStart) return io.to(roomId).emit('error-msg', "Someone cannot afford the $100 Ante!");
-
-        room.pot = 0;
         for (let id of room.order) {
             room.players[id].chips -= ante;
             room.pot += ante;
             await User.findOneAndUpdate({ username: room.players[id].username }, { bankroll: room.players[id].chips });
         }
-
         room.status = "playing";
         room.deck = createDeck();
         room.highBet = 0; room.turn = 0; room.phase = 0; room.community = [];
         room.order.forEach(id => {
             const p = room.players[id];
-            p.folded = false; p.bet = 0; p.acted = false; p.last = "ANTE $100";
             p.cards = [room.deck.pop(), room.deck.pop()];
             io.to(id).emit('receive-cards', p.cards);
         });
-        io.to(roomId).emit('update', room);
+        io.to(socket.roomId).emit('update', room);
     });
 
     socket.on('action', (data) => {
@@ -150,17 +108,17 @@ io.on('connection', (socket) => {
         if (!room || room.order[room.turn] !== socket.id) return;
         const p = room.players[socket.id];
         p.acted = true;
-        if (data.type === 'fold') { p.folded = true; p.last = "FOLDED"; }
-        else if (data.type === 'check') { p.last = "CHECKED"; }
+        if (data.type === 'fold') { p.folded = true; p.last = "FOLD"; }
+        else if (data.type === 'check') { p.last = "CHECK"; }
         else if (data.type === 'call') {
             const diff = room.highBet - p.bet;
-            p.chips -= diff; p.bet += diff; room.pot += diff; p.last = `CALLED $${diff}`;
+            p.chips -= diff; p.bet += diff; room.pot += diff; p.last = `CALL $${diff}`;
         }
         else if (data.type === 'raise') {
             const amt = parseInt(data.amount);
             const added = amt - p.bet;
             p.chips -= added; p.bet = amt; room.pot += added;
-            room.highBet = amt; p.last = `RAISED TO $${amt}`;
+            room.highBet = amt; p.last = `RAISE $${amt}`;
             room.order.forEach(pid => { if (pid !== socket.id) room.players[pid].acted = false; });
         }
         processNext(room);
@@ -168,12 +126,12 @@ io.on('connection', (socket) => {
 
     function processNext(room) {
         const active = room.order.filter(id => !room.players[id].folded);
-        if (active.length === 1) return resolveWinner(room, active[0], "Everyone folded");
+        if (active.length === 1) return resolveWinner(room, active[0], "Folds");
         const done = active.every(id => room.players[id].acted && room.players[id].bet === room.highBet);
         if (done) {
             room.phase++;
             room.highBet = 0;
-            room.order.forEach(id => { room.players[id].bet = 0; room.players[id].acted = false; room.players[id].last = ""; });
+            room.order.forEach(id => { room.players[id].bet = 0; room.players[id].acted = false; });
             if (room.phase === 1) room.community = [room.deck.pop(), room.deck.pop(), room.deck.pop()];
             else if (room.phase === 2 || room.phase === 3) room.community.push(room.deck.pop());
             else if (room.phase === 4) return showdown(room);
@@ -203,7 +161,7 @@ io.on('connection', (socket) => {
             const score = getHandScore(room.players[id].cards, room.community);
             if (score > bestScore) { bestScore = score; bestId = id; }
         });
-        await resolveWinner(room, bestId, "Showdown Winner");
+        await resolveWinner(room, bestId, "Showdown");
     }
 
     socket.on('leave-room', async () => {
@@ -211,27 +169,14 @@ io.on('connection', (socket) => {
         if (rooms[roomId]) {
             const p = rooms[roomId].players[socket.id];
             if (p) await User.findOneAndUpdate({ username: p.username }, { bankroll: p.chips });
-            delete rooms[roomId].players[socket.id];
             rooms[roomId].order = rooms[roomId].order.filter(id => id !== socket.id);
-            socket.leave(roomId);
-            socket.roomId = null;
+            delete rooms[roomId].players[socket.id];
             if (rooms[roomId].order.length === 0) delete rooms[roomId];
             else io.to(roomId).emit('update', rooms[roomId]);
             const user = await User.findOne({ username: socket.username });
             socket.emit('back-to-lobby', { bankroll: user.bankroll });
         }
     });
-
-    socket.on('disconnect', async () => {
-        if (socket.roomId && rooms[socket.roomId]) {
-            const p = rooms[socket.roomId].players[socket.id];
-            if (p) await User.findOneAndUpdate({ username: p.username }, { bankroll: p.chips });
-            delete rooms[socket.roomId].players[socket.id];
-            rooms[socket.roomId].order = rooms[socket.roomId].order.filter(id => id !== socket.id);
-            if (rooms[socket.roomId].order.length === 0) delete rooms[socket.roomId];
-        }
-    });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
