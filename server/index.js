@@ -116,12 +116,15 @@ io.on('connection', (socket) => {
     }
 
     socket.on('start-game', async () => {
-        const room = rooms[socket.roomId];
-        if (!room || room.order.length < 2) return;
+        const roomId = socket.roomId;
+        if (!roomId || !rooms[roomId]) return;
+        const room = rooms[roomId];
+        if (room.order.length < 2) return;
+
         const ante = 100;
         let canStart = true;
         room.order.forEach(id => { if (room.players[id].chips < ante) canStart = false; });
-        if (!canStart) return io.to(socket.roomId).emit('error-msg', "Someone cannot afford the $100 Ante!");
+        if (!canStart) return io.to(roomId).emit('error-msg', "Someone cannot afford the $100 Ante!");
 
         room.pot = 0;
         for (let id of room.order) {
@@ -139,7 +142,7 @@ io.on('connection', (socket) => {
             p.cards = [room.deck.pop(), room.deck.pop()];
             io.to(id).emit('receive-cards', p.cards);
         });
-        io.to(socket.roomId).emit('update', room);
+        io.to(roomId).emit('update', room);
     });
 
     socket.on('action', (data) => {
@@ -231,4 +234,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
