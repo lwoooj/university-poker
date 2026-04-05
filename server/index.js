@@ -44,11 +44,10 @@ function getHandScore(hand, community) {
     const fullHand = [...hand, ...community];
     const vCounts = {};
     fullHand.forEach(c => { vCounts[c.value] = (vCounts[c.value] || 0) + 1; });
-    const vSorted = Object.keys(vCounts).map(Number).sort((a, b) => b - a);
     const pairs = Object.entries(vCounts).filter(([v, c]) => c === 2).map(([v]) => Number(v)).sort((a,b)=>b-a);
     if (pairs.length >= 2) return 200 + pairs[0];
     if (pairs.length === 1) return 100 + pairs[0];
-    return vSorted[0];
+    return Math.max(...fullHand.map(c => c.value));
 }
 
 io.on('connection', (socket) => {
@@ -98,6 +97,7 @@ io.on('connection', (socket) => {
         room.order.forEach(id => {
             const p = room.players[id];
             p.cards = [room.deck.pop(), room.deck.pop()];
+            p.folded = false; p.acted = false; p.bet = 0;
             io.to(id).emit('receive-cards', p.cards);
         });
         io.to(socket.roomId).emit('update', room);
@@ -107,6 +107,12 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomId];
         if (!room || room.order[room.turn] !== socket.id) return;
         const p = room.players[socket.id];
+        
+        // LOGIC: Prevent checking if there's a bet to meet
+        if (data.type === 'check' && room.highBet > p.bet) {
+            return socket.emit('error-msg', "Illegal move: You must call or fold.");
+        }
+
         p.acted = true;
         if (data.type === 'fold') { p.folded = true; p.last = "FOLD"; }
         else if (data.type === 'check') { p.last = "CHECK"; }
@@ -116,6 +122,7 @@ io.on('connection', (socket) => {
         }
         else if (data.type === 'raise') {
             const amt = parseInt(data.amount);
+            if (isNaN(amt) || amt <= room.highBet) return socket.emit('error-msg', "Raise must be higher than current bet!");
             const added = amt - p.bet;
             p.chips -= added; p.bet = amt; room.pot += added;
             room.highBet = amt; p.last = `RAISE $${amt}`;
@@ -173,8 +180,7 @@ io.on('connection', (socket) => {
             delete rooms[roomId].players[socket.id];
             if (rooms[roomId].order.length === 0) delete rooms[roomId];
             else io.to(roomId).emit('update', rooms[roomId]);
-            const user = await User.findOne({ username: socket.username });
-            socket.emit('back-to-lobby', { bankroll: user.bankroll });
+            socket.emit('back-to-lobby');
         }
     });
 });

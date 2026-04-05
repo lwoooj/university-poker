@@ -5,148 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UCI Poker League</title>
     <style>
-        :root { 
-            --uci-blue: #0064a4; 
-            --uci-gold: #ffd200; 
-            --dark-bg: #0f0f0f; 
-        }
-        
+        :root { --uci-blue: #0064a4; --uci-gold: #ffd200; --dark-bg: #0f0f0f; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-            background: var(--dark-bg); 
-            color: white; 
-            font-family: 'Inter', sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-        }
-
+        body { background: var(--dark-bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
 
         /* HUD BANNER */
         #player-hud {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 45px;
-            background: rgba(0, 100, 164, 0.9);
-            backdrop-filter: blur(10px);
-            border-bottom: 2px solid var(--uci-gold);
-            z-index: 1000;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            align-items: center;
-            padding: 0 20px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 45px;
+            background: rgba(0, 100, 164, 0.9); backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--uci-gold); z-index: 1000;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; padding: 0 20px;
         }
-
         .hud-left { justify-self: start; }
         .hud-center { justify-self: center; font-size: 1.2rem; font-weight: 900; }
         .hud-right { justify-self: end; }
 
-        #auth-container, #lobby { 
-            margin-top: 120px; 
-            padding: 40px; 
-            background: rgba(255,255,255,0.05); 
-            border-radius: 20px; 
-            width: 380px; 
-            text-align: center; 
-            border: 1px solid #333; 
-        }
-
-        input { 
-            padding: 12px; 
-            width: 100%;
-            background: #1a1a1a; 
-            color: white; 
-            border: 1px solid #444; 
-            margin-bottom: 25px;
-            border-radius: 5px; 
-        }
-
-        button { 
-            padding: 10px 18px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            border-radius: 6px; 
-            border: none; 
-            transition: transform 0.1s;
-        }
-        
+        /* CONTAINERS */
+        #auth-container, #lobby { margin-top: 120px; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 20px; width: 380px; text-align: center; border: 1px solid #333; }
+        input { padding: 12px; width: 100%; background: #1a1a1a; color: white; border: 1px solid #444; margin-bottom: 25px; border-radius: 5px; }
+        button { padding: 10px 18px; cursor: pointer; font-weight: bold; border-radius: 6px; border: none; transition: transform 0.1s; }
         button:active { transform: scale(0.95); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .btn-gold { background: var(--uci-gold); color: black; }
         .btn-blue { background: var(--uci-blue); color: white; width: 100%; }
 
         /* POKER TABLE */
         #game { width: 100%; max-width: 1000px; margin-top: 100px; text-align: center; }
-        
         #table { 
-            background: radial-gradient(circle, #2e7d32, #1b5e20); 
-            height: 380px; 
-            border-radius: 200px; 
-            border: 12px solid #3e2723; 
-            position: relative; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            margin: 60px auto;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            background: radial-gradient(circle, #2e7d32, #1b5e20); height: 380px; border-radius: 200px; border: 12px solid #3e2723; 
+            position: relative; display: flex; align-items: center; justify-content: center; margin: 60px auto; box-shadow: 0 10px 50px rgba(0,0,0,0.5);
         }
-
-        .card { 
-            background: white; 
-            color: black; 
-            width: 55px; 
-            height: 80px; 
-            border-radius: 6px; 
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
-            margin: 4px; 
-            font-weight: bold; 
-            font-size: 1.4rem; 
-        }
-
-        #opponents { 
-            position: absolute; 
-            top: -85px; 
-            display: flex; 
-            gap: 12px; 
-            width: 100%; 
-            justify-content: center; 
-            z-index: 50;
-        }
+        .card { background: white; color: black; width: 55px; height: 80px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; margin: 4px; font-weight: bold; font-size: 1.4rem; }
+        #opponents { position: absolute; top: -85px; display: flex; gap: 12px; width: 100%; justify-content: center; z-index: 50; }
         .opp-box { background: #1a1a1a; padding: 10px; border-radius: 10px; border: 2px solid #333; min-width: 110px; }
         .is-turn { border-color: var(--uci-gold); box-shadow: 0 0 10px var(--uci-gold); }
 
-        #controls { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0;
-            width: 100%; 
-            background: #111; 
-            padding: 15px 0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            gap: 12px; 
-            border-top: 1px solid #333; 
-            z-index: 900;
-        }
-
-        .raise-group {
-            display: flex;
-            align-items: center;
-            background: #222;
-            padding: 4px;
-            border-radius: 8px;
-            gap: 5px;
-        }
-
+        /* CENTERED CONTROLS */
+        #controls { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 15px 0; display: flex; justify-content: center; align-items: center; gap: 12px; border-top: 1px solid #333; z-index: 900; }
+        .raise-group { display: flex; align-items: center; background: #222; padding: 4px; border-radius: 8px; gap: 5px; }
         #raise-amt { width: 70px; border: none; padding: 8px; text-align: center; margin: 0; }
     </style>
 </head>
@@ -157,13 +55,8 @@
             <span style="color: var(--uci-gold); font-size: 0.7rem; display:block;">PLAYER</span>
             <span id="hud-username">---</span>
         </div>
-        <div class="hud-center">
-            <span id="hud-balance" style="color: #4caf50;">$0</span>
-        </div>
-        <div class="hud-right">
-            <span style="color: var(--uci-gold); font-size: 0.7rem; display:block; text-align:right;">UCI POKER</span>
-            <small style="font-size:0.6rem; color:#888;">v2.0.2</small>
-        </div>
+        <div class="hud-center"><span id="hud-balance" style="color: #4caf50;">$0</span></div>
+        <div class="hud-right"><span style="color: var(--uci-gold); font-size: 0.7rem; display:block; text-align:right;">UCI POKER</span><small style="font-size:0.6rem; color:#888;">v2.0.3</small></div>
     </div>
 
     <div id="auth-container">
@@ -185,28 +78,17 @@
     <div id="game" class="hidden">
         <div id="table">
             <div id="opponents"></div>
-            <div style="text-align: center;">
-                <p style="color:rgba(255,255,255,0.4); font-size:0.8rem;">POT</p>
-                <h1 id="pot-ui" style="color: var(--uci-gold); font-size: 3rem; line-height:1;">$0</h1>
-            </div>
+            <div style="text-align: center;"><p style="color:rgba(255,255,255,0.4); font-size:0.8rem;">POT</p><h1 id="pot-ui" style="color: var(--uci-gold); font-size: 3rem; line-height:1;">$0</h1></div>
             <div id="comm-ui" style="position: absolute; bottom: 30px;"></div>
         </div>
-
-        <div id="my-area" style="padding-bottom: 120px;">
-            <div id="my-hand" style="margin-bottom: 10px;"></div>
-        </div>
+        <div id="my-area" style="padding-bottom: 120px;"><div id="my-hand" style="margin-bottom: 10px;"></div></div>
         
         <div id="controls">
             <button class="btn-gold" id="host-start" style="display:none;" onclick="socket.emit('start-game')">START ($100)</button>
             <button id="fold-btn" onclick="act('fold')" style="background: #b71c1c; color: white;">FOLD</button>
             <button id="check-btn" onclick="act('check')" style="background: #1565c0; color: white;">CHECK</button>
             <button id="call-btn" onclick="act('call')" style="background: #1565c0; color: white;">CALL</button>
-            
-            <div class="raise-group">
-                <input type="number" id="raise-amt" placeholder="Amt">
-                <button id="raise-btn" class="btn-gold" onclick="raise()">RAISE</button>
-            </div>
-            
+            <div class="raise-group"><input type="number" id="raise-amt" placeholder="Amt"><button id="raise-btn" class="btn-gold" onclick="raise()">RAISE</button></div>
             <button onclick="leaveGame()" style="background: #444; color: white;">QUIT</button>
         </div>
     </div>
@@ -237,61 +119,46 @@
         });
 
         function act(type) { socket.emit('action', { type }); }
-        function raise() { 
-            const amt = document.getElementById('raise-amt').value; 
-            if(amt) { socket.emit('action', { type: 'raise', amount: amt }); document.getElementById('raise-amt').value = ''; }
-        }
+        function raise() { const amt = document.getElementById('raise-amt').value; if(amt) { socket.emit('action', { type: 'raise', amount: amt }); document.getElementById('raise-amt').value = ''; } }
         function leaveGame() { if(confirm("Return to lobby?")) socket.emit('leave-room'); }
 
         socket.on('update', (room) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game').classList.remove('hidden');
             document.getElementById('player-hud').classList.remove('hidden');
-            
             const me = room.players[socket.id];
             if(!me) return;
 
-            // Updated HUD elements
             document.getElementById('hud-username').innerText = me.username;
             document.getElementById('hud-balance').innerText = "$" + me.chips.toLocaleString();
-            
-            // Safety check: only update game-bal if you decide to add it back later
-            const gameBalEl = document.getElementById('game-bal');
-            if (gameBalEl) gameBalEl.innerText = "$" + me.chips.toLocaleString();
-
             document.getElementById('pot-ui').innerText = "$" + room.pot.toLocaleString();
             document.getElementById('comm-ui').innerHTML = room.community.map(c => renderCard(c)).join('');
 
+            // Call Button Logic
+            const callAmount = room.highBet - me.bet;
+            document.getElementById('call-btn').innerText = callAmount > 0 ? `CALL $${callAmount}` : `CALL`;
+
+            // Opponents
             const opps = document.getElementById('opponents');
-            opps.innerHTML = '';
-            room.order.forEach(id => {
-                if(id === socket.id) return;
+            opps.innerHTML = room.order.filter(id => id !== socket.id).map(id => {
                 const p = room.players[id];
-                opps.innerHTML += `
-                    <div class="opp-box ${room.order[room.turn] === id ? 'is-turn' : ''}">
-                        <div style="font-size:0.7rem; color:var(--uci-gold);">${p.username}</div>
-                        <div style="font-weight:bold;">$${p.chips}</div>
-                        <div style="font-size:0.6rem; color:#888;">${p.last || '-'}</div>
-                    </div>`;
-            });
+                return `<div class="opp-box ${room.order[room.turn] === id ? 'is-turn' : ''}"><div style="font-size:0.7rem; color:var(--uci-gold);">${p.username}</div><div style="font-weight:bold;">$${p.chips}</div><div style="font-size:0.6rem; color:#888;">${p.last || '-'}</div></div>`;
+            }).join('');
 
             const isHost = room.order[0] === socket.id;
             const startBtn = document.getElementById('host-start');
             startBtn.style.display = (isHost && room.status === 'waiting') ? "block" : "none";
             startBtn.disabled = room.order.length < 2;
 
-            const isMyTurn = room.order[room.turn] === socket.id;
-            ['fold-btn', 'check-btn', 'call-btn', 'raise-btn'].forEach(id => {
-                document.getElementById(id).disabled = !isMyTurn || room.status !== 'playing';
-            });
+            const isMyTurn = (room.order[room.turn] === socket.id && room.status === 'playing');
+            ['fold-btn', 'call-btn', 'raise-btn'].forEach(id => document.getElementById(id).disabled = !isMyTurn);
+            document.getElementById('check-btn').disabled = !isMyTurn || callAmount > 0;
         });
 
-        socket.on('receive-cards', (cards) => { 
-            document.getElementById('my-hand').innerHTML = cards.map(c => renderCard(c)).join(''); 
-        });
-        
-        socket.on('back-to-lobby', (data) => { location.reload(); });
-        socket.on('done', (d) => alert(`Hand Over!\nWinner: ${d.win === socket.id ? "YOU" : "Opponent"}\nAmount: $${d.amount}`));
+        socket.on('receive-cards', (cards) => { document.getElementById('my-hand').innerHTML = cards.map(c => renderCard(c)).join(''); });
+        socket.on('back-to-lobby', () => { location.reload(); });
+        socket.on('done', (d) => alert(`Hand Over! Winner: ${d.win === socket.id ? "YOU" : "Opponent"} ($${d.amount})`));
+        socket.on('error-msg', (msg) => alert(msg));
 
         function renderCard(c) {
             const isRed = (c.suit === '♥' || c.suit === '♦');
