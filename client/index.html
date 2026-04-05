@@ -25,7 +25,7 @@
 
         .hidden { display: none !important; }
 
-        /* FIXED HUD */
+        /* HUD BANNER */
         #player-hud {
             position: fixed;
             top: 0;
@@ -81,7 +81,7 @@
         .btn-gold { background: var(--uci-gold); color: black; }
         .btn-blue { background: var(--uci-blue); color: white; width: 100%; }
 
-        /* Poker Table */
+        /* POKER TABLE */
         #game { width: 100%; max-width: 1000px; margin-top: 100px; text-align: center; }
         
         #table { 
@@ -93,7 +93,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            margin: 60px auto; /* Increased margin for opponent boxes */
+            margin: 60px auto;
             box-shadow: 0 10px 50px rgba(0,0,0,0.5);
         }
 
@@ -111,7 +111,6 @@
             font-size: 1.4rem; 
         }
 
-        /* Opponent alignment fix */
         #opponents { 
             position: absolute; 
             top: -85px; 
@@ -163,7 +162,7 @@
         </div>
         <div class="hud-right">
             <span style="color: var(--uci-gold); font-size: 0.7rem; display:block; text-align:right;">UCI POKER</span>
-            <small style="font-size:0.6rem; color:#888;">v2.0.1</small>
+            <small style="font-size:0.6rem; color:#888;">v2.0.2</small>
         </div>
     </div>
 
@@ -195,7 +194,6 @@
 
         <div id="my-area" style="padding-bottom: 120px;">
             <div id="my-hand" style="margin-bottom: 10px;"></div>
-            <div style="font-weight: bold; color:#888;">Table Chips: <span id="game-bal" style="color:white;">$0</span></div>
         </div>
         
         <div id="controls">
@@ -253,14 +251,17 @@
             const me = room.players[socket.id];
             if(!me) return;
 
-            // HUD & Stack Updates
+            // Updated HUD elements
             document.getElementById('hud-username').innerText = me.username;
             document.getElementById('hud-balance').innerText = "$" + me.chips.toLocaleString();
-            document.getElementById('game-bal').innerText = "$" + me.chips.toLocaleString();
+            
+            // Safety check: only update game-bal if you decide to add it back later
+            const gameBalEl = document.getElementById('game-bal');
+            if (gameBalEl) gameBalEl.innerText = "$" + me.chips.toLocaleString();
+
             document.getElementById('pot-ui').innerText = "$" + room.pot.toLocaleString();
             document.getElementById('comm-ui').innerHTML = room.community.map(c => renderCard(c)).join('');
 
-            // Opponent boxes
             const opps = document.getElementById('opponents');
             opps.innerHTML = '';
             room.order.forEach(id => {
@@ -274,13 +275,11 @@
                     </div>`;
             });
 
-            // FIXED: Start Button Logic
             const isHost = room.order[0] === socket.id;
             const startBtn = document.getElementById('host-start');
             startBtn.style.display = (isHost && room.status === 'waiting') ? "block" : "none";
             startBtn.disabled = room.order.length < 2;
 
-            // Controls
             const isMyTurn = room.order[room.turn] === socket.id;
             ['fold-btn', 'check-btn', 'call-btn', 'raise-btn'].forEach(id => {
                 document.getElementById(id).disabled = !isMyTurn || room.status !== 'playing';
