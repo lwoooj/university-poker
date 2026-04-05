@@ -28,7 +28,23 @@
 
         .hidden { display: none !important; }
 
-        /* Modern Login & Lobby */
+        /* Floating HUD */
+        #player-hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 100, 164, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--uci-gold);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+
         #auth-container, #lobby {
             margin-top: 80px;
             padding: 40px;
@@ -38,7 +54,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             width: 400px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         input {
@@ -52,25 +67,18 @@
             outline: none;
         }
 
-        input:focus { border-color: var(--uci-blue); }
-
         button {
             padding: 12px 24px;
             border-radius: 8px;
             border: none;
             cursor: pointer;
             font-weight: 700;
-            letter-spacing: 0.5px;
             transition: all 0.2s ease;
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn-gold { background: var(--uci-gold); color: #000; }
-        .btn-gold:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 210, 0, 0.3); }
         .btn-blue { background: var(--uci-blue); color: white; width: 100%; }
 
         .room-card {
@@ -81,11 +89,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid rgba(255,255,255,0.05);
         }
 
-        /* Game Table UI */
-        #game { width: 100%; max-width: 1100px; padding: 20px; position: relative; }
+        /* Game Layout Fixes */
+        #game { 
+            width: 100%; 
+            max-width: 1100px; 
+            padding: 20px; 
+            margin-top: 70px; /* Space for HUD */
+        }
         
         #table {
             background: radial-gradient(circle, #2e7d32 0%, #1b5e20 100%);
@@ -99,28 +111,27 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 100px #000;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
 
         .card {
             background: white;
             color: black;
-            width: 60px;
-            height: 85px;
-            border-radius: 8px;
+            width: 55px;
+            height: 80px;
+            border-radius: 6px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin: 5px;
-            font-size: 1.5rem;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.4);
-            border: 1px solid #ddd;
+            margin: 4px;
+            font-size: 1.4rem;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
         }
 
         #opponents {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             position: absolute;
             top: -70px;
             width: 100%;
@@ -129,94 +140,88 @@
 
         .opp-box {
             background: #1a1a1a;
-            padding: 15px;
-            border-radius: 15px;
+            padding: 12px;
+            border-radius: 12px;
             border: 2px solid #333;
-            min-width: 120px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            min-width: 110px;
         }
 
-        .is-turn { border-color: var(--uci-gold); box-shadow: 0 0 20px rgba(255, 210, 0, 0.4); }
+        .is-turn { border-color: var(--uci-gold); box-shadow: 0 0 15px rgba(255, 210, 0, 0.4); }
 
         #controls {
-            background: rgba(18, 18, 18, 0.95);
-            backdrop-filter: blur(15px);
+            background: rgba(18, 18, 18, 0.98);
             padding: 20px;
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
             width: 100%;
             display: flex;
             justify-content: center;
-            gap: 25px;
+            gap: 20px;
             align-items: center;
             border-top: 1px solid rgba(255,255,255,0.1);
-            z-index: 100;
+            z-index: 900;
         }
 
         .btn-fold { background: #c62828; color: white; }
-        .btn-action { background: #1565c0; color: white; min-width: 100px; }
-        
-        #my-area {
-            text-align: center;
-            margin-top: 20px;
-            padding-bottom: 150px;
-        }
+        .btn-action { background: #1565c0; color: white; }
     </style>
 </head>
 <body>
 
+    <div id="player-hud" class="hidden">
+        <div>
+            <span style="font-size: 0.7rem; color: var(--uci-gold); display: block;">PLAYER</span>
+            <span id="hud-username" style="font-weight: bold;">---</span>
+        </div>
+        <div style="text-align: center;">
+            <span style="font-size: 0.7rem; color: var(--uci-gold); display: block;">YOUR STACK</span>
+            <span id="hud-balance" style="font-size: 1.6rem; font-weight: 900; color: #4caf50;">$0</span>
+        </div>
+        <div id="hud-cards" style="display: flex; transform: scale(0.65); origin: right;"></div>
+    </div>
+
     <div id="auth-container">
-        <h1 style="color: var(--uci-gold); margin-bottom: 10px;">UCI POKER</h1>
-        <p style="color: #888; margin-bottom: 30px;">Professional Network Login</p>
-        <input type="text" id="username-input" placeholder="UCInetID (e.g. zotlink)">
+        <h1 style="color: var(--uci-gold);">UCI POKER</h1>
+        <input type="text" id="username-input" placeholder="UCInetID">
         <button class="btn-gold" style="width: 100%" onclick="login()">Enter Arena</button>
     </div>
 
     <div id="lobby" class="hidden">
         <h2 style="margin-top:0">Welcome, <span id="user-display" style="color: var(--uci-gold);"></span></h2>
         <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 20px;">
-            <span style="color: #aaa; font-size: 0.9rem;">Current Balance</span>
+            <span style="color: #aaa;">Current Balance</span>
             <div style="font-size: 1.8rem; color: #4caf50; font-weight: bold;">$<span id="lobby-bal">0</span></div>
         </div>
-        <button class="btn-blue" onclick="socket.emit('create-room')">Open New Table</button>
-        <div id="room-list" style="margin-top: 20px; text-align: left;"></div>
+        <button class="btn-blue" onclick="socket.emit('create-room')">Create Table</button>
+        <div id="room-list" style="margin-top: 20px;"></div>
     </div>
 
     <div id="game" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-            <div id="room-display" style="color: var(--uci-blue); font-weight: bold; letter-spacing: 1px;"></div>
-            <button onclick="leaveGame()" style="background: rgba(255,255,255,0.1); color: white; padding: 5px 15px;">QUIT</button>
-        </div>
-
         <div id="table">
             <div id="opponents"></div>
             <div style="text-align: center;">
-                <div style="color: rgba(255,255,255,0.5); font-size: 0.8rem; text-transform: uppercase;">Current Pot</div>
+                <div style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">TOTAL POT</div>
                 <h2 id="pot-ui" style="color: var(--uci-gold); font-size: 3rem; margin: 0;">$0</h2>
             </div>
-            <div id="comm-ui" style="margin-top: 30px; min-height: 95px;"></div>
+            <div id="comm-ui" style="margin-top: 25px;"></div>
         </div>
 
-        <div id="my-area">
-            <div id="my-hand" style="margin-bottom: 15px;"></div>
-            <div style="font-size: 1.2rem; font-weight: bold;">YOUR STACK: <span id="game-bal" style="color:#4caf50;">$0</span></div>
+        <div id="my-area" style="text-align:center; padding-bottom: 120px;">
+            <div id="my-hand" style="margin-bottom: 10px;"></div>
+            <div style="font-weight:bold;">Local Stack: <span id="game-bal">$0</span></div>
         </div>
 
         <div id="controls">
             <button class="btn-fold" onclick="act('fold')">FOLD</button>
             <button class="btn-action" id="check-btn" onclick="act('check')">CHECK</button>
             <button class="btn-action" id="call-btn" onclick="act('call')">CALL</button>
-            
-            <div style="display:flex; align-items:center; background: #333; padding: 5px 10px; border-radius: 8px; gap: 10px;">
-                <input type="number" id="raise-amt" placeholder="Bet" style="margin:0; width:80px; background:transparent; border:none; padding:5px; color:white;">
-                <button class="btn-gold" style="padding: 8px 15px;" onclick="raise()">RAISE</button>
+            <div style="display:flex; align-items:center; background:#333; padding:5px 10px; border-radius:8px; gap:8px;">
+                <input type="number" id="raise-amt" placeholder="Bet" style="margin:0; width:70px; background:transparent; border:none; color:white;">
+                <button class="btn-gold" onclick="raise()">RAISE</button>
             </div>
-
-            <button id="host-start" class="btn-gold" style="display:none; border: 2px solid #000;" onclick="socket.emit('start-game')">
-                START HAND ($100 ANTE)
-            </button>
+            <button id="host-start" class="btn-gold" style="display:none;" onclick="socket.emit('start-game')">START ($100 ANTE)</button>
+            <button onclick="leaveGame()" style="background:#444; color:white; padding: 10px;">QUIT</button>
         </div>
     </div>
 
@@ -227,7 +232,7 @@
 
         function login() {
             const val = document.getElementById('username-input').value;
-            if(!val) return alert("Please enter a username");
+            if(!val) return;
             myUsername = val;
             socket.emit('login', val);
             document.getElementById('auth-container').classList.add('hidden');
@@ -236,104 +241,82 @@
         }
 
         socket.on('lobby-list', (data) => {
-            // FIX: Ensure bankroll from server is mapped correctly
-            document.getElementById('lobby-bal').innerText = data.bankroll;
+            document.getElementById('lobby-bal').innerText = data.bankroll.toLocaleString();
             const container = document.getElementById('room-list');
-            container.innerHTML = data.list.length === 0 ? "<p style='text-align:center; color:#666;'>No tables available.</p>" : 
-                data.list.map(r => `
-                    <div class="room-card">
-                        <span><b>${r.id}</b> <br><small style="color:#888">${r.count}/6 Players</small></span>
-                        <button class="btn-gold" style="padding: 5px 15px;" onclick="socket.emit('join-room', '${r.id}')" 
-                            ${r.count >= 6 || r.status !== 'waiting' ? 'disabled' : ''}>JOIN</button>
-                    </div>
-                `).join('');
+            container.innerHTML = data.list.map(r => `
+                <div class="room-card">
+                    <span><b>${r.id}</b> (${r.count}/6)</span>
+                    <button class="btn-gold" onclick="socket.emit('join-room', '${r.id}')" 
+                        ${r.count >= 6 || r.status !== 'waiting' ? 'disabled' : ''}>JOIN</button>
+                </div>
+            `).join('') || "<p>No active tables.</p>";
         });
 
         function act(type) { socket.emit('action', { type }); }
-        
         function raise() {
             const amt = document.getElementById('raise-amt').value;
-            if(amt) { 
-                socket.emit('action', { type: 'raise', amount: amt }); 
-                document.getElementById('raise-amt').value = ''; 
-            }
+            if(amt) { socket.emit('action', { type: 'raise', amount: amt }); document.getElementById('raise-amt').value = ''; }
         }
-
-        function leaveGame() { 
-            if(confirm("Cashing out will save your chips to MongoDB. Leave?")) { 
-                socket.emit('leave-room'); 
-            } 
-        }
+        function leaveGame() { if(confirm("Save and exit?")) socket.emit('leave-room'); }
 
         socket.on('update', (room) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game').classList.remove('hidden');
-            document.getElementById('room-display').innerText = room.status === 'playing' ? "LIVE GAME" : "WAITING FOR PLAYERS";
+            document.getElementById('player-hud').classList.remove('hidden');
             
             const me = room.players[socket.id];
             if(!me) return;
 
-            document.getElementById('pot-ui').innerText = "$" + room.pot;
-            document.getElementById('game-bal').innerText = "$" + me.chips;
+            // Update HUD and Game Area
+            document.getElementById('hud-username').innerText = me.username;
+            document.getElementById('hud-balance').innerText = "$" + me.chips.toLocaleString();
+            document.getElementById('game-bal').innerText = "$" + me.chips.toLocaleString();
+            document.getElementById('pot-ui').innerText = "$" + room.pot.toLocaleString();
             document.getElementById('comm-ui').innerHTML = room.community.map(c => renderCard(c)).join('');
-            
+
             const oppContainer = document.getElementById('opponents');
             oppContainer.innerHTML = '';
-            
             room.order.forEach(id => {
                 if(id === socket.id) return;
                 const p = room.players[id];
-                const activeTurn = room.order[room.turn] === id;
                 oppContainer.innerHTML += `
-                    <div class="opp-box ${activeTurn ? 'is-turn' : ''}">
+                    <div class="opp-box ${room.order[room.turn] === id ? 'is-turn' : ''}">
                         <div style="font-size:0.7rem; color:#888;">${p.username}</div>
                         <div style="font-weight:bold; color:#4caf50;">$${p.chips}</div>
-                        <span class="decision-tag" style="color:var(--uci-gold); font-size:0.7rem;">${p.last || ''}</span>
+                        <div style="color:var(--uci-gold); font-size:0.6rem;">${p.last || ''}</div>
                     </div>`;
             });
 
-            // FIX: START GAME BUTTON LOGIC
             const isHost = room.order[0] === socket.id;
-            const isWaiting = room.status === 'waiting';
             const hostBtn = document.getElementById('host-start');
-
-            if(isHost && isWaiting) {
-                hostBtn.style.display = "block";
-                // Host can only start if there are at least 2 players
-                hostBtn.disabled = room.order.length < 2;
-            } else {
-                hostBtn.style.display = "none";
-            }
+            hostBtn.style.display = (isHost && room.status === 'waiting') ? "block" : "none";
+            hostBtn.disabled = room.order.length < 2;
 
             const isMyTurn = room.order[room.turn] === socket.id;
             const callDiff = room.highBet - me.bet;
-            
-            document.getElementById('check-btn').style.display = (callDiff === 0) ? "inline-block" : "none";
-            document.getElementById('call-btn').style.display = (callDiff > 0) ? "inline-block" : "none";
+            document.getElementById('check-btn').style.display = callDiff === 0 ? "inline" : "none";
+            document.getElementById('call-btn').style.display = callDiff > 0 ? "inline" : "none";
             document.getElementById('call-btn').innerText = `CALL $${callDiff}`;
 
-            // Disable all buttons if it's not your turn
             document.querySelectorAll('#controls button').forEach(btn => {
-                if(btn.id !== 'host-start') {
-                    btn.disabled = !isMyTurn || room.status !== 'playing';
-                }
+                if(!['host-start', 'QUIT'].includes(btn.innerText)) btn.disabled = !isMyTurn || room.status !== 'playing';
             });
         });
 
         socket.on('receive-cards', (cards) => {
-            document.getElementById('my-hand').innerHTML = cards.map(c => renderCard(c)).join('');
+            const html = cards.map(c => renderCard(c)).join('');
+            document.getElementById('my-hand').innerHTML = html;
+            document.getElementById('hud-cards').innerHTML = html;
         });
 
         socket.on('back-to-lobby', (data) => {
             document.getElementById('game').classList.add('hidden');
+            document.getElementById('player-hud').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
-            document.getElementById('lobby-bal').innerText = data.bankroll;
+            document.getElementById('lobby-bal').innerText = data.bankroll.toLocaleString();
         });
 
-        socket.on('done', (d) => { 
-            alert(`Winner: ${d.win === socket.id ? "YOU" : "Opponent"}\nAmount: $${d.amount}\nReason: ${d.msg}`); 
-        });
-
+        socket.on('done', (d) => alert(`Winner: ${d.win === socket.id ? "YOU" : "Opponent"}\n$${d.amount} - ${d.msg}`));
         socket.on('error-msg', (msg) => alert(msg));
 
         function renderCard(c) {
