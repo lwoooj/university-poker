@@ -42,59 +42,75 @@ function createDeck() {
 
 function getHandScore(hand, community) {
     const fullHand = [...hand, ...community].sort((a, b) => b.value - a.value);
-    
-    // 1. Check for Flush Suit (Needed for Flush and Straight Flush)
+
+    // --- HELPER: Tie-Breaker Calculation ---
+    // Takes a list of cards to exclude, and returns a decimal score for the remaining top kickers.
+    const getKickerScore = (excludeVals, countNeeded) => {
+        const kickers = fullHand.filter(c => !excludeVals.includes(c.value)).slice(0, countNeeded);
+        return kickers.reduce((acc, card, index) => acc + (card.value / Math.pow(100, index + 1)), 0);
+    };
+
+    // 1. Check for FLUSH
     const suitCounts = {};
     fullHand.forEach(c => suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1);
     const flushSuit = Object.keys(suitCounts).find(s => suitCounts[s] >= 5);
-    const flushCards = flushSuit ? fullHand.filter(c => c.suit === flushSuit) : [];
+    const flushCards = flushSuit ? fullHand.filter(c => c.suit === flushSuit) : null;
 
-    // 2. Check for Straight Flush
-    if (flushSuit) {
-        const sFlushVals = [...new Set(flushCards.map(c => c.value))];
-        for (let i = 0; i <= sFlushVals.length - 5; i++) {
-            if (sFlushVals[i] - sFlushVals[i + 4] === 4) return 800 + sFlushVals[i];
+    // 2. Check for STRAIGHT FLUSH / ROYAL FLUSH
+    if (flushCards) {
+        const sVals = [...new Set(flushCards.map(c => c.value))];
+        for (let i = 0; i <= sVals.length - 5; i++) {
+            if (sVals[i] - sVals[i + 4] === 4) return 800 + sVals[i];
         }
-        if ([14, 5, 4, 3, 2].every(v => sFlushVals.includes(v))) return 805;
+        if ([14, 5, 4, 3, 2].every(v => sVals.includes(v))) return 805; // Low Straight Flush
     }
 
-    // 3. Frequency Analysis (For Pairs, Trips, Quads, Full House)
+    // 3. Frequency Analysis (For Quads, Full House, Trips, Pairs)
     const vCounts = {};
     fullHand.forEach(c => vCounts[c.value] = (vCounts[c.value] || 0) + 1);
-    const counts = Object.entries(vCounts).map(([val, count]) => ({ val: Number(val), count }));
-    counts.sort((a, b) => b.count - a.count || b.val - a.val);
+    const counts = Object.entries(vCounts)
+        .map(([val, count]) => ({ val: Number(val), count }))
+        .sort((a, b) => b.count - a.count || b.val - a.val);
 
-    // 4. Four of a Kind
-    if (counts[0].count === 4) return 700 + counts[0].val;
-
-    // 5. Full House (Three of a kind + a pair)
-    if (counts[0].count === 3 && counts[1] && counts[1].count >= 2) {
-        return 600 + counts[0].val;
+    // 4. FOUR OF A KIND
+    if (counts[0].count === 4) {
+        return 700 + counts[0].val + getKickerScore([counts[0].val], 1);
     }
 
-    // 6. Flush
-    if (flushSuit) return 500 + flushCards[0].value;
+    // 5. FULL HOUSE (Three of a Kind + Pair)
+    if (counts[0].count === 3 && counts[1] && counts[1].count >= 2) {
+        return 600 + counts[0].val + (counts[1].val / 100);
+    }
 
-    // 7. Straight
+    // 6. FLUSH (Top 5 cards of the same suit)
+    if (flushCards) {
+        return 500 + flushCards.slice(0, 5).reduce((acc, c, i) => acc + (c.value / Math.pow(100, i)), 0);
+    }
+
+    // 7. STRAIGHT
     const uniqueVals = [...new Set(fullHand.map(c => c.value))];
     for (let i = 0; i <= uniqueVals.length - 5; i++) {
         if (uniqueVals[i] - uniqueVals[i + 4] === 4) return 400 + uniqueVals[i];
     }
-    if ([14, 5, 4, 3, 2].every(v => uniqueVals.includes(v))) return 405;
+    if ([14, 5, 4, 3, 2].every(v => uniqueVals.includes(v))) return 405; // Wheel Straight
 
-    // 8. Three of a Kind
-    if (counts[0].count === 3) return 300 + counts[0].val;
-
-    // 9. Two Pair
-    if (counts[0].count === 2 && counts[1] && counts[1].count === 2) {
-        return 200 + counts[0].val;
+    // 8. THREE OF A KIND
+    if (counts[0].count === 3) {
+        return 300 + counts[0].val + getKickerScore([counts[0].val], 2);
     }
 
-    // 10. One Pair
-    if (counts[0].count === 2) return 100 + counts[0].val;
+    // 9. TWO PAIR
+    if (counts[0].count === 2 && counts[1] && counts[1].count === 2) {
+        return 200 + counts[0].val + (counts[1].val / 100) + getKickerScore([counts[0].val, counts[1].val], 1);
+    }
 
-    // 11. High Card
-    return fullHand[0].value;
+    // 10. ONE PAIR
+    if (counts[0].count === 2) {
+        return 100 + counts[0].val + getKickerScore([counts[0].val], 3);
+    }
+
+    // 11. HIGH CARD
+    return fullHand.slice(0, 5).reduce((acc, c, i) => acc + (c.value / Math.pow(100, i)), 0);
 }
 
 io.on('connection', (socket) => {
