@@ -95,8 +95,8 @@
     </div>
 
     <div id="auth-container">
-        <h2 style="color: var(--uci-gold); margin-bottom: 20px;">POKER LEAGUE</h2>
-        <input type="text" id="username-input" placeholder="UCInetID">
+        <h2 style="color: var(--uci-gold); margin-bottom: 20px;">GOLDILUCKS</h2>
+        <input type="text" id="username-input" placeholder="Username">
         <button class="btn-gold" style="width:100%" onclick="login()">ENTER GAME</button>
     </div>
 
@@ -216,23 +216,27 @@
         }
         
         let performanceChart;
-        let chipHistory = [10000]; // Starting baseline
+        let chipHistory = JSON.parse(localStorage.getItem('poker_history')) || [10000];
         const socket = io(window.location.origin);
         let myUsername = "";
 
         function initChart() {
             const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Create labels based on how many points we actually have in history
+            const initialLabels = chipHistory.map((_, i) => i === 0 ? "Start" : `Game ${i}`);
+
             performanceChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Start'],
+                    labels: initialLabels, 
                     datasets: [{
                         label: 'Bankroll',
-                        data: [10000],
-                        borderColor: '#ffd200', // UCI Gold
-                        backgroundColor: 'rgba(255, 210, 0, 0.1)',
-                        fill: true,
-                        tension: 0.4, // Smoothing
+                        data: chipHistory, 
+                        borderColor: chipHistory[chipHistory.length - 1] >= 10000 ? '#4caf50' : '#f44336',
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        tension: 0,
                         pointRadius: 3
                     }]
                 },
@@ -241,7 +245,10 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: { display: false },
-                        y: { grid: { color: '#222' }, ticks: { color: '#888', font: { size: 10 } } }
+                        y: { 
+                            grid: { color: '#222' }, 
+                            ticks: { color: '#888', font: { size: 10 } } 
+                        }
                     },
                     plugins: { legend: { display: false } }
                 }
@@ -254,14 +261,12 @@
             myUsername = val;
             socket.emit('login', val);
             
-            // NEW: Use the helper
             showScreen('lobby');
-            
             document.getElementById('user-display').innerText = "Welcome, " + val;
             
-            setTimeout(() => {
-                if (!performanceChart) initChart();
-            }, 200);
+            if (!performanceChart) {
+                initChart();
+            }
         }
 
         function showTableSelection() {
@@ -281,8 +286,6 @@
         function leaveGame() { 
             if(confirm("Return to lobby?")) {
                 socket.emit('leave-room');
-                
-                showScreen('lobby');
                 
                 document.getElementById('my-hand').innerHTML = '';
                 document.getElementById('comm-ui').innerHTML = '';
@@ -320,22 +323,23 @@
 
             // 3. Update Performance Graph (Chart.js)
             if (performanceChart) {
-                // If it's our first time getting data, set the first point
-                if (chipHistory.length === 1 && chipHistory[0] === 10000) {
-                    chipHistory = [10000, data.bankroll]; 
-                } else if (data.bankroll !== chipHistory[chipHistory.length - 1]) {
+                if (data.bankroll !== chipHistory[chipHistory.length - 1]) {
                     chipHistory.push(data.bankroll);
+
+                    if (chipHistory.length > 10) chipHistory.shift(); 
+
+                    localStorage.setItem('poker_history', JSON.stringify(chipHistory));
                 }
 
-                if (chipHistory.length > 20) chipHistory.shift(); 
-                
-                performanceChart.data.labels = chipHistory.map((_, i) => i === 0 ? "Start" : `H${i}`);
+                performanceChart.data.labels = chipHistory.map((_, i) => i === 0 ? "Start" : `Game ${i}`);
                 performanceChart.data.datasets[0].data = chipHistory;
-                
+
                 const lineColor = data.bankroll >= 10000 ? '#4caf50' : '#f44336';
                 performanceChart.data.datasets[0].borderColor = lineColor;
+            
                 performanceChart.update();
             }
+
 
             // 4. Render Active Tables List
             const container = document.getElementById('room-list');
@@ -349,6 +353,8 @@
                         <button class="btn-gold" style="padding:5px 15px; font-size:0.8rem;" onclick="socket.emit('join-room', '${r.id}')">JOIN TABLE</button>
                     </div>`).join('') || "<p style='color:#555; text-align:center; padding:20px;'>No active tables. Create one to start the competition.</p>";
             }
+
+            showScreen('lobby');
         });
 
         socket.on('update', (room) => {

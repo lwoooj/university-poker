@@ -242,11 +242,37 @@ io.on('connection', (socket) => {
         const roomId = socket.roomId;
         if (rooms[roomId]) {
             const p = rooms[roomId].players[socket.id];
-            if (p) await User.findOneAndUpdate({ username: p.username }, { bankroll: p.chips });
+            
+            if (p) {
+                // 1. Update the database with the current chip count
+                const updatedUser = await User.findOneAndUpdate(
+                    { username: p.username }, 
+                    { bankroll: p.chips },
+                    { new: true } // This returns the updated document
+                );
+
+                // 2. IMPORTANT: Send the new bankroll back to the user immediately
+                // This ensures the lobby reflects the win/loss without a refresh
+                socket.emit('lobby-list', {
+                    bankroll: updatedUser.bankroll,
+                    list: Object.values(rooms).map(r => ({
+                        id: r.id,
+                        count: r.order.length
+                    }))
+                });
+            }
+
+            // 3. Room cleanup logic
             rooms[roomId].order = rooms[roomId].order.filter(id => id !== socket.id);
             delete rooms[roomId].players[socket.id];
-            if (rooms[roomId].order.length === 0) delete rooms[roomId];
-            else io.to(roomId).emit('update', rooms[roomId]);
+            
+            if (rooms[roomId].order.length === 0) {
+                delete rooms[roomId];
+            } else {
+                io.to(roomId).emit('update', rooms[roomId]);
+            }
+            
+            // 4. Tell the client to switch screens
             socket.emit('back-to-lobby');
         }
     });
