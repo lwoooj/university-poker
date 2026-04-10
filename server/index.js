@@ -178,12 +178,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('request-create-team', async (data) => {
-        const cost = 10000;
         const user = await User.findOne({ username: socket.username });
-
-        if (!user || user.bankroll < cost) {
-            return socket.emit('error-msg', "Insufficient funds. You need $10,000 to start a team.");
-        }
 
         // Generate unique 6-character code
         const teamCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -199,18 +194,15 @@ io.on('connection', (socket) => {
 
             await newTeam.save();
 
-            // Deduct the money
-            user.bankroll -= cost;
             user.teamCode = teamCode;
             await user.save();
             socket.teamCode = teamCode;
-            socket.bankroll = user.bankroll;
 
             socket.emit('team-created', { name: data.name, code: teamCode });
             
             // Update their lobby stats immediately
             socket.emit('lobby-list', { 
-                bankroll: socket.bankroll,
+                bankroll: user.bankroll,
                 teamCode: socket.teamCode,
                 list: Object.keys(rooms).map(id => ({ id, count: rooms[id].order.length }))
             });
@@ -279,6 +271,24 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('join-team-chat', (teamCode) => {
+            if (!teamCode) return;
+            socket.join(`chat_${teamCode}`);
+            console.log(`${socket.username} joined chat for ${teamCode}`);
+        });
+
+        socket.on('send-team-message', (data) => {
+            if (!data.message || !data.teamCode) return;
+
+            const chatPayload = {
+                sender: socket.username,
+                text: data.message,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            io.to(`chat_${data.teamCode}`).emit('receive-team-message', chatPayload);
+        });
+
     function joinRoom(socket, roomId) {
         socket.join(roomId);
         socket.roomId = roomId;
@@ -293,7 +303,6 @@ io.on('connection', (socket) => {
             const ante = 100;
             for (let id of room.order) {
                 const p = room.players[id];
-                // NEW: Record chips BEFORE the ante for the percentage calculation
                 p.startChips = p.chips; 
                 
                 p.chips -= ante;
@@ -310,14 +319,13 @@ io.on('connection', (socket) => {
                 io.to(id).emit('receive-cards', p.cards);
             });
             io.to(socket.roomId).emit('update', room);
-        });
+    });
 
     socket.on('action', (data) => {
         const room = rooms[socket.roomId];
         if (!room || room.order[room.turn] !== socket.id) return;
         const p = room.players[socket.id];
-        
-        // LOGIC: Prevent checking if there's a bet to meet
+
         if (data.type === 'check' && room.highBet > p.bet) {
             return socket.emit('error-msg', "Illegal move: You must call or fold.");
         }
