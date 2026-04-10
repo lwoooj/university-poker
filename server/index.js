@@ -44,32 +44,36 @@ function getHandScore(hand, community) {
     const fullHand = [...hand, ...community].sort((a, b) => b.value - a.value);
 
     // --- HELPER: Tie-Breaker Calculation ---
-    // Takes a list of cards to exclude, and returns a decimal score for the remaining top kickers.
+    // Standardizes how we add kickers to base scores using decimals
     const getKickerScore = (excludeVals, countNeeded) => {
         const kickers = fullHand.filter(c => !excludeVals.includes(c.value)).slice(0, countNeeded);
         return kickers.reduce((acc, card, index) => acc + (card.value / Math.pow(100, index + 1)), 0);
     };
 
-    // 1. Check for FLUSH
+    // 1. Check for FLUSH (Needed for Straight Flush & Flush)
     const suitCounts = {};
     fullHand.forEach(c => suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1);
     const flushSuit = Object.keys(suitCounts).find(s => suitCounts[s] >= 5);
     const flushCards = flushSuit ? fullHand.filter(c => c.suit === flushSuit) : null;
 
-    // 2. Check for STRAIGHT FLUSH / ROYAL FLUSH
+    // 2. ROYAL / STRAIGHT FLUSH
     if (flushCards) {
         const sVals = [...new Set(flushCards.map(c => c.value))];
         for (let i = 0; i <= sVals.length - 5; i++) {
-            if (sVals[i] - sVals[i + 4] === 4) return 800 + sVals[i];
+            if (sVals[i] - sVals[i + 4] === 4) {
+                return (sVals[i] === 14 ? 900 : 800) + sVals[i];
+            }
         }
-        if ([14, 5, 4, 3, 2].every(v => sVals.includes(v))) return 805; // Low Straight Flush
+        // A-2-3-4-5 Straight Flush (The Wheel)
+        if ([14, 5, 4, 3, 2].every(v => sVals.includes(v))) return 805; 
     }
 
-    // 3. Frequency Analysis (For Quads, Full House, Trips, Pairs)
+    // 3. Frequency Analysis (Group cards by how many of each rank)
     const vCounts = {};
     fullHand.forEach(c => vCounts[c.value] = (vCounts[c.value] || 0) + 1);
     const counts = Object.entries(vCounts)
         .map(([val, count]) => ({ val: Number(val), count }))
+        // CRITICAL: Sort by frequency first, then by card value
         .sort((a, b) => b.count - a.count || b.val - a.val);
 
     // 4. FOUR OF A KIND
@@ -77,12 +81,13 @@ function getHandScore(hand, community) {
         return 700 + counts[0].val + getKickerScore([counts[0].val], 1);
     }
 
-    // 5. FULL HOUSE (Three of a Kind + Pair)
+    // 5. FULL HOUSE 
+    // If you have two sets of Trips, the higher Trip is the set, the lower Trip is the pair.
     if (counts[0].count === 3 && counts[1] && counts[1].count >= 2) {
         return 600 + counts[0].val + (counts[1].val / 100);
     }
 
-    // 6. FLUSH (Top 5 cards of the same suit)
+    // 6. FLUSH
     if (flushCards) {
         return 500 + flushCards.slice(0, 5).reduce((acc, c, i) => acc + (c.value / Math.pow(100, i)), 0);
     }
@@ -92,16 +97,18 @@ function getHandScore(hand, community) {
     for (let i = 0; i <= uniqueVals.length - 5; i++) {
         if (uniqueVals[i] - uniqueVals[i + 4] === 4) return 400 + uniqueVals[i];
     }
-    if ([14, 5, 4, 3, 2].every(v => uniqueVals.includes(v))) return 405; // Wheel Straight
+    if ([14, 5, 4, 3, 2].every(v => uniqueVals.includes(v))) return 405;
 
     // 8. THREE OF A KIND
     if (counts[0].count === 3) {
         return 300 + counts[0].val + getKickerScore([counts[0].val], 2);
     }
 
-    // 9. TWO PAIR
-    if (counts[0].count === 2 && counts[1] && counts[1].count === 2) {
-        return 200 + counts[0].val + (counts[1].val / 100) + getKickerScore([counts[0].val, counts[1].val], 1);
+    // 9. TWO PAIR (The "Friend Fix")
+    // Filter all pairs. If there are 3 pairs, this picks the top 2.
+    const allPairs = counts.filter(c => c.count >= 2);
+    if (allPairs.length >= 2) {
+        return 200 + allPairs[0].val + (allPairs[1].val / 100) + getKickerScore([allPairs[0].val, allPairs[1].val], 1);
     }
 
     // 10. ONE PAIR
