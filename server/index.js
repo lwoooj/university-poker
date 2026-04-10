@@ -394,6 +394,7 @@ io.on('connection', (socket) => {
 
                 socket.emit('lobby-list', {
                     bankroll: updatedUser.bankroll,
+                    teamCode: updatedUser.teamCode,
                     list: Object.values(rooms).map(r => ({
                         id: r.id,
                         count: r.order.length
