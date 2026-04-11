@@ -139,6 +139,7 @@
     <link rel="icon" type="image/png" href="logo2.png">
 
 <body>
+    <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
     <div id="player-hud" class="hidden">
         <div class="hud-left">
@@ -367,9 +368,8 @@
             const msgHtml = `
                     <div class="chat-log-entry ${isMe ? 'is-me' : ''}">
                         <div style="display: flex; align-items: center;">
-                            <span class="chat-timestamp">[${data.time}]</span>
                             <span class="chat-sender" style="color: ${isMe ? 'var(--uci-gold)' : '#00ff41'}">
-                                ${data.sender}>
+                                ${data.sender}:
                             </span>
                         </div>
                         <span class="chat-text">${data.text}</span>
@@ -415,6 +415,51 @@
                     (screenId === 'game') ? hud.classList.remove('hidden') : hud.classList.add('hidden');
                 }
             }
+        
+        function showPopup(message, type = 'gold') {
+            const container = document.getElementById('notification-container');
+            const popup = document.createElement('div');
+            
+            // Set color based on type
+            const colors = {
+                gold: 'var(--uci-gold)',
+                blue: 'var(--uci-blue)',
+                red: '#f44336',
+                green: '#4caf50'
+            };
+            const activeColor = colors[type] || colors.gold;
+
+            popup.style.cssText = `
+                background: rgba(10, 10, 10, 0.95);
+                color: white;
+                padding: 15px 25px;
+                border-left: 4px solid ${activeColor};
+                border-radius: 4px;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                min-width: 250px;
+                transform: translateX(120%);
+                transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                pointer-events: all;
+                border: 1px solid #333;
+                border-left-width: 5px;
+            `;
+
+            popup.innerHTML = `
+                <div style="color: ${activeColor}; font-size: 0.6rem; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold;">SYSTEM NOTIFICATION</div>
+                <div>${message}</div>
+            `;
+
+            container.appendChild(popup);
+
+            setTimeout(() => popup.style.transform = 'translateX(0)', 10);
+
+            setTimeout(() => {
+                popup.style.transform = 'translateX(120%)';
+                setTimeout(() => popup.remove(), 400);
+            }, 4000);
+        }
 
         function handleTeamViewLogic() {
             const guestView = document.getElementById('team-guest-view');
@@ -651,7 +696,7 @@
         }
 
         socket.on('team-joined', (data) => {
-            alert(`Welcome to ${data.name}!`);
+            showPopup(`Welcome to ${data.name}!`, 'green');
             toggleJoinModal(false);
             myTeamCode = data.code;
             showScreen('team-menu');
@@ -672,7 +717,7 @@
             showScreen('lobby');
         });
 
-        socket.on('error-msg', (msg) => alert(msg));
+        socket.on('error-msg', (msg) => showPopup(msg, 'red'));
 
         socket.on('lobby-list', (data) => {
             myTeamCode = data.teamCode;
@@ -755,9 +800,8 @@
                     return `
                         <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid #222; font-size:0.9rem; display:flex; justify-content:space-between; align-items:center;">
                             <span>${m.username}</span>
-                            <div style="text-align: right; display: flex; align-items: center; gap: 10px;">
-                                <span style="color:#666; font-size:0.7rem; letter-spacing: 1px;">MEMBER</span>
-                                <span style="color: ${isPositive ? '#4caf50' : '#f44336'}; font-weight: bold; font-family: monospace; font-size: 0.8rem; min-width: 55px; text-align: right;">
+                            <div style="text-align: right;">
+                                <span style="color: ${isPositive ? '#4caf50' : '#f44336'}; font-weight: bold; font-family: monospace; font-size: 0.8rem; min-width: 55px; text-align: right; display: inline-block;">
                                     ${isPositive ? '+' : ''}${m.growth}%
                                 </span>
                             </div>
@@ -844,7 +888,8 @@
         });
 
         socket.on('done', (d) => {
-            alert(`Hand Over! Winner: ${d.win === socket.id ? "YOU" : "Opponent"} ($${d.amount})`);
+            const msg = d.win === socket.id ? "HAND SECURED. POT COLLECTED." : "HAND LOST.";
+            showPopup(msg, d.win === socket.id ? 'green' : 'red');
         });
 
         function renderCard(c) {
