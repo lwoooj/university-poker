@@ -37,9 +37,35 @@ const teamSchema = new mongoose.Schema({
     code: { type: String, unique: true },
     leader: String,
     members: [String], 
-    vault: { type: Number, default: 0 }
+    vault: { type: Number, default: 0 },
+    performanceHistory: { type: [Number], default: [0] }
 });
+
 const Team = mongoose.model('Team', teamSchema);
+
+async function takeTeamSnapshots() {
+    const teams = await Team.find({});
+    for (let team of teams) {
+        const members = await User.find({ username: { $in: team.members } });
+        if (members.length === 0) continue;
+
+        let totalPercent = 0;
+        members.forEach(m => {
+            const memberGrowth = ((m.bankroll / 10000) - 1) * 100;
+            totalPercent += memberGrowth;
+        });
+
+        const avgPercent = totalPercent / members.length;
+
+        team.performanceHistory.push(parseFloat(avgPercent.toFixed(2)));
+        if (team.performanceHistory.length > 14) team.performanceHistory.shift();
+        
+        await team.save();
+    }
+    console.log("✅ 12-Hour Team Snapshots Updated");
+}
+
+setInterval(takeTeamSnapshots, 43200000);
 
 function createDeck() {
     let deck = [];
@@ -216,17 +242,29 @@ io.on('connection', (socket) => {
         const team = await Team.findOne({ code });
         if (!team) return;
 
-        // Fetch all members to calculate total bankroll
         const members = await User.find({ username: { $in: team.members } });
+
+        const memberData = members.map(m => {
+            const growth = (((m.bankroll / 10000) - 1) * 100).toFixed(1);
+            return {
+                username: m.username,
+                growth: growth
+            };
+        });
+    
         const totalBankroll = members.reduce((sum, m) => sum + m.bankroll, 0);
-        const growth = (((totalBankroll / (team.members.length * 10000)) - 1) * 100).toFixed(1);
+
+        let totalPercent = 0;
+        members.forEach(m => totalPercent += (((m.bankroll / 10000) - 1) * 100));
+        const avgGrowth = (totalPercent / members.length).toFixed(1);
 
         socket.emit('team-details-response', {
             name: team.name,
             code: team.code,
-            members: team.members,
+            members: memberData,
             totalBankroll,
-            growth
+            growth: avgGrowth,
+            history: team.performanceHistory
         });
     });
 

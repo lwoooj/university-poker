@@ -90,6 +90,9 @@
             font-family: 'Courier New', Courier, monospace;
             padding: 15px;
             box-shadow: inset 0 0 10px #000;
+            flex-grow: 1;
+            overflow-y: auto;  
+            min-height: 0;
         }
 
         #team-chat-display::-webkit-scrollbar {
@@ -160,53 +163,53 @@
         
         <div id="team-guest-view" class="hidden" style="background: rgba(255,255,255,0.05); padding: 40px; border-radius: 20px; width: 400px; border: 1px solid #333; display: flex; flex-direction: column; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <h2 style="color: var(--uci-gold); margin-bottom: 30px; text-align: center;">TEAM OPERATIONS</h2>
-            
             <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
                 <button class="btn-gold" onclick="toggleJoinModal(true)" style="padding: 20px; font-size: 1rem;">JOIN A TEAM</button>
                 <button class="btn-blue" onclick="toggleCreateModal(true)" style="padding: 20px; font-size: 1rem;">CREATE NEW TEAM</button>
             </div>
-
-            <button onclick="showScreen('lobby')" style="margin-top: 30px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline;">Back to Lobby</button>
+            <button onclick="showScreen('lobby')" style="margin-top: 30px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline;">← Back to Dashboard</button>
         </div>
 
-        <div id="team-member-view" class="hidden" style="width: 100%; display: grid; grid-template-columns: 1.2fr 1fr 1.8fr; gap: 20px; align-items: stretch; height: 600px; margin-top: 20px;">
+        <div id="team-member-view" class="hidden" style="width: 100%; display: grid; grid-template-columns: 350px 300px 1fr; gap: 20px; align-items: stretch; height: 650px; max-height: 650px; overflow: hidden; margin-top: 20px;">
             
-            <div style="display: flex; flex-direction: column; gap: 20px; height: 100%;">
-                <div style="padding-left: 10px;">
-                    <h2 id="team-title-ui" style="color: var(--uci-gold); font-size: 2rem; line-height: 1.1; margin-bottom: 5px;">---</h2>
-                    <p id="team-code-ui" style="color: #666; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold;">CODE: ---</p>
+            <div style="display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0; overflow: hidden;">
+                <div style="padding-left: 10px; flex-shrink: 0;">
+                    <h2 id="team-title-ui" style="color: var(--uci-gold); font-size: 1.8rem; line-height: 1.1; margin-bottom: 5px;">---</h2>
+                    <p id="team-code-ui" style="color: #666; font-size: 0.7rem; letter-spacing: 2px; font-weight: bold;">CODE: ---</p>
                 </div>
 
-                <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 1px solid #333; display: flex; flex-direction: column; flex-grow: 1; min-height: 0;">
-                    <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 15px; opacity: 0.7;">TEAM RADIOGRAM</p>
-                    <div id="team-chat-display" style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;"></div>
-                    <div style="display: flex; gap: 0; background: #000; border: 1px solid #333; padding: 5px;">
-                        <span style="color: #00ff41; padding: 8px 0 8px 10px; font-family: monospace;">$</span>
-                        <input type="text" id="team-chat-input" placeholder="execute_command..." 
-                            style="margin-bottom: 0; padding: 8px; background: transparent; border: none; font-family: monospace; color: #00ff41; outline: none;"
+                <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 1px solid #333; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; overflow: hidden;">
+                    <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 15px; opacity: 0.7; flex-shrink: 0;">TEAM RADIOGRAM</p>
+                    <div id="team-chat-display" style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; min-height: 0;"></div>
+                    
+                    <div style="display: flex; gap: 0; background: #000; border: 1px solid #333; padding: 5px; flex-shrink: 0;">
+                        <span style="color: #00ff41; padding: 8px 0 8px 10px; font-family: monospace;"></span>
+                        <input type="text" id="team-chat-input" placeholder="Message..." 
+                            style="margin-bottom: 0; padding: 8px; background: transparent; border: none; font-family: monospace; color: #00ff41; outline: none; width: 100%;"
                             onkeypress="if(event.key === 'Enter') sendTeamMsg()">
                         <button class="btn-blue" style="width: auto; padding: 0 15px; background: #111; color: #00ff41; border: 1px solid #333; font-family: monospace;" onclick="sendTeamMsg()">SEND</button>
                     </div>
                 </div>
             </div>
 
-            <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 25px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%;">
-                <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 20px; opacity: 0.7;">ACTIVE ROSTER</p>
-                <div id="member-list-ui" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
-                </div>
-                <div style="flex-grow: 1;"></div> 
-                <button onclick="showScreen('lobby')" style="margin-top: 20px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 0.8rem;">Exit Team Hub</button>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 25px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+                <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 20px; opacity: 0.7; flex-shrink: 0;">ACTIVE ROSTER</p>
+                <div id="member-list-ui" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; min-height: 0;"></div>
+                <button onclick="showScreen('lobby')" style="margin-top: 20px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 0.8rem; flex-shrink: 0;">Exit Team Hub</button>
             </div>
 
-            <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 30px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 30px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%; min-height: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-shrink: 0;">
                     <div>
                         <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; opacity: 0.7;">PERFORMANCE INDEX</p>
-                        <div id="team-vault-ui" style="font-size: 1.8rem; color: #4caf50; font-weight: 900; margin-top: 5px;">$0</div>
+                        <div id="team-growth-ui" style="font-size: 2.2rem; color: #4caf50; font-weight: 900; margin-top: 5px;">0.0%</div>
                     </div>
-                    <div id="team-growth-ui" style="font-size: 1.2rem; font-weight: 900; padding-top: 15px;">0.0%</div>
+                    <div style="text-align: right;">
+                        <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; opacity: 0.7;">TEAM VAULT</p>
+                        <div id="team-vault-ui" style="font-size: 1.1rem; font-weight: 900; padding-top: 5px; color: #888;">$0</div>
+                    </div>
                 </div>
-                <div style="flex-grow: 1; width: 100%; min-height: 0;">
+                <div style="flex-grow: 1; width: 100%; min-height: 0; position: relative;">
                     <canvas id="teamPerformanceChart"></canvas>
                 </div>
             </div>
@@ -493,30 +496,48 @@
 
         let teamChipHistory = [0]; 
 
-        function initTeamChart() {
+        function initTeamChart(historyData) {
             const ctx = document.getElementById('teamPerformanceChart').getContext('2d');
+            
+            if (teamPerformanceChart) {
+                teamPerformanceChart.destroy();
+            }
+
             teamPerformanceChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Start'],
+                    labels: historyData.map(() => ""),
                     datasets: [{
-                        label: 'Club Value',
-                        data: teamChipHistory,
+                        label: 'Avg Member Growth %',
+                        data: historyData,
                         borderColor: '#ffd200',
-                        backgroundColor: 'transparent',
-                        tension: 0,
+                        backgroundColor: 'rgba(255, 210, 0, 0.1)',
+                        fill: true,
+                        tension: 0.3,
                         borderWidth: 2,
-                        pointRadius: 4
+                        pointRadius: 3
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { display: false },
-                        y: { grid: { color: '#222' }, ticks: { color: '#888' } }
+                        x: { 
+                            display: false,
+                            grid: { display: false } 
+                        },
+                        y: { 
+                            grid: { color: '#222' }, 
+                            ticks: { 
+                                color: '#888',
+                                callback: function(value) { return value + '%'; }
+                            } 
+                        }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
                 }
             });
         }
@@ -570,14 +591,11 @@
 
         function resetGraph() {
             if (confirm("Reset graph history? (Your current balance will remain the same)")) {
-                // Get the last known bankroll from the UI
                 const currentVal = parseInt(document.getElementById('lobby-bal').innerText.replace(/,/g, '')) || 10000;
                 
-                // Reset local variables and storage
                 chipHistory = [currentVal];
                 localStorage.setItem('poker_history', JSON.stringify(chipHistory));
                 
-                // Refresh the chart visually
                 if (performanceChart) {
                     performanceChart.data.labels = ['Start'];
                     performanceChart.data.datasets[0].data = chipHistory;
@@ -648,7 +666,6 @@
             socket.emit('request-create-team', { name, desc });
         }
 
-        // Listen for success/failure from server
         socket.on('team-created', (data) => {
             alert(`Success! Team ${data.name} created. Code: ${data.code}`);
             toggleCreateModal(false);
@@ -657,7 +674,6 @@
 
         socket.on('error-msg', (msg) => alert(msg));
 
-        // ONE CLEAN LOBBY LISTENER
         socket.on('lobby-list', (data) => {
             myTeamCode = data.teamCode;
             const lobbyBalEl = document.getElementById('lobby-bal');
@@ -674,13 +690,13 @@
                 
                 if (diff > 0) {
                     lobbyPercent.innerText = `+${percent}%`;
-                    lobbyPercent.style.color = "#4caf50"; // Green
+                    lobbyPercent.style.color = "#4caf50";
                 } else if (diff < 0) {
-                    lobbyPercent.innerText = `${percent}%`; // Shows the - sign automatically
-                    lobbyPercent.style.color = "#f44336"; // Red
+                    lobbyPercent.innerText = `${percent}%`;
+                    lobbyPercent.style.color = "#f44336";
                 } else {
                     lobbyPercent.innerText = "0.0%";
-                    lobbyPercent.style.color = "#888"; // Gray
+                    lobbyPercent.style.color = "#888";
                 }
             }
 
@@ -702,7 +718,6 @@
             
                 performanceChart.update();
             }
-
 
             // 4. Render Active Tables List
             const container = document.getElementById('room-list');
@@ -728,29 +743,30 @@
             const growthEl = document.getElementById('team-growth-ui');
             
             vaultEl.innerText = `$${data.totalBankroll.toLocaleString()}`;
-            growthEl.innerText = `${data.growth > 0 ? '+' : ''}${data.growth}%`;
-            growthEl.style.color = data.growth >= 0 ? "#4caf50" : "#f44336";
+                growthEl.innerText = `${data.growth > 0 ? '+' : ''}${data.growth}%`;
 
-            // Handle Member List
-            const list = document.getElementById('member-list-ui');
-            list.innerHTML = data.members.map(m => `
-                <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid #222; font-size:0.9rem; display:flex; justify-content:space-between;">
-                    <span>${m}</span>
-                    <span style="color:#666; font-size:0.7rem;">MEMBER</span>
-                </div>
-            `).join('');
+                growthEl.style.color = data.growth >= 0 ? "#4caf50" : "#f44336";
 
-            // Handle Chart Initialization and Update
-            if (!teamPerformanceChart) {
-                initTeamChart();
-            }
-            
-            // For now, we update the chart with the current total
-            teamPerformanceChart.data.datasets[0].data.push(data.totalBankroll);
-            if (teamPerformanceChart.data.datasets[0].data.length > 10) teamPerformanceChart.data.datasets[0].data.shift();
-            teamPerformanceChart.data.labels = teamPerformanceChart.data.datasets[0].data.map((_, i) => i === 0 ? "Start" : `Update ${i}`);
-            teamPerformanceChart.update();
-        });
+                initTeamChart(data.history || [0]);
+
+                const list = document.getElementById('member-list-ui');
+                list.innerHTML = data.members.map(m => {
+                    const isPositive = parseFloat(m.growth) >= 0;
+                    return `
+                        <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid #222; font-size:0.9rem; display:flex; justify-content:space-between; align-items:center;">
+                            <span>${m.username}</span>
+                            <div style="text-align: right; display: flex; align-items: center; gap: 10px;">
+                                <span style="color:#666; font-size:0.7rem; letter-spacing: 1px;">MEMBER</span>
+                                <span style="color: ${isPositive ? '#4caf50' : '#f44336'}; font-weight: bold; font-family: monospace; font-size: 0.8rem; min-width: 55px; text-align: right;">
+                                    ${isPositive ? '+' : ''}${m.growth}%
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (data.history) initTeamChart(data.history);
+            });
 
         socket.on('lobby-list-update', (data) => {
             const container = document.getElementById('room-list');
