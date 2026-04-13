@@ -237,6 +237,36 @@ io.on('connection', (socket) => {
             socket.emit('error-msg', "Team name already exists!");
         }
     });
+    
+    socket.on('request-global-rankings', async () => {
+        const teams = await Team.find({});
+        
+        // Process all teams for the list
+        const allTeamsData = await Promise.all(teams.map(async (t) => {
+            const members = await User.find({ username: { $in: t.members } });
+            let totalPercent = 0;
+            members.forEach(m => totalPercent += (((m.bankroll / 10000) - 1) * 100));
+            const avgGrowth = members.length > 0 ? (totalPercent / members.length) : 0;
+
+            return {
+                name: t.name,
+                growth: parseFloat(avgGrowth.toFixed(1)),
+                memberCount: t.members.length,
+                history: t.performanceHistory
+            };
+        }));
+
+        // Sort by growth descending
+        allTeamsData.sort((a, b) => b.growth - a.growth);
+
+        // Take top 5 for the chart
+        const topFive = allTeamsData.slice(0, 5);
+
+        socket.emit('global-rankings-data', {
+            allTeams: allTeamsData,
+            topFive: topFive
+        });
+    });
 
     socket.on('request-team-details', async (code) => {
         const team = await Team.findOne({ code });

@@ -139,6 +139,29 @@
     <link rel="icon" type="image/png" href="logo2.png">
 
 <body>
+    <div id="ranking-menu" class="hidden" style="margin-top: 60px; width: 98%; max-width: 1600px; display: grid; grid-template-columns: 380px 1fr; gap: 25px; height: 80vh; padding: 20px; box-sizing: border-box;">
+        
+        <div id="left-ranking-panel" style="background: rgba(10, 10, 10, 0.6); border-radius: 12px; border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden;">
+            <h2 style="color: var(--uci-gold); margin-bottom: 5px;">GLOBAL RANKINGS</h2>
+            <p style="color: #666; font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 15px;">TOP PERFORMING TEAMS</p>
+            
+            <div id="ranking-list-ui" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                </div>
+
+            <button onclick="showScreen('lobby')" style="margin-top: 15px; color: #555; background: none; border: none; cursor: pointer; text-decoration: underline;">BACK TO LOBBY</button>
+        </div>
+
+        <div id="right-graph-panel" style="background: rgba(10, 10, 10, 0.6); border-radius: 12px; border: 1px solid #333; padding: 25px; display: flex; flex-direction: column; min-width: 0;">
+            <div style="margin-bottom: 20px;">
+                <h2 style="color: var(--uci-blue);">PERFORMANCE OVERVIEW</h2>
+                <p style="color: #666; font-size: 0.7rem; letter-spacing: 1px;">TOP 5 TEAMS // 12H DATA POINTS</p>
+            </div>
+            <div style="flex-grow: 1; position: relative; min-height: 0;">
+                <canvas id="globalRankingChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 
     <div id="player-hud" class="hidden">
@@ -257,7 +280,7 @@
                     <button style="flex: 1; padding: 25px; background: rgba(0,0,0,0.3); color: #888; border-radius: 8px; font-weight: bold; font-size: 1.3rem; border: 1px solid #444; cursor: pointer; transition: all 0.3s ease;" 
                             onmouseover="this.style.color='var(--uci-gold)'; this.style.borderColor='var(--uci-gold)'; this.style.background='rgba(255,210,0,0.05)'" 
                             onmouseout="this.style.color='#888'; this.style.borderColor='#444'; this.style.background='rgba(0,0,0,0.3)'"
-                            onclick="alert('Coming Soon!')">
+                            onclick="showRanking()">
                         RANKING
                     </button>
                 </div>
@@ -349,6 +372,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let myTeamCode = null;
+        let globalRankingChart = null;
         let myUsername = "";
         let allTeams = [];
         let performanceChart;
@@ -359,6 +383,79 @@
         window.onload = () => {
             initChart();
         };
+
+        function showRanking() {
+            showScreen('ranking-menu');
+            socket.emit('request-global-rankings');
+        }
+
+        socket.on('global-rankings-data', (data) => {
+            const list = document.getElementById('ranking-list-ui');
+
+            list.innerHTML = data.allTeams.map((t, index) => {
+                const isPositive = t.growth >= 0;
+                return `
+                    <div style="padding: 15px; background: rgba(255,255,255,0.03); border: 1px solid #222; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="color: #444; font-weight: bold; font-family: monospace;">#${index + 1}</span>
+                            <div>
+                                <div style="color: white; font-weight: bold; font-size: 0.9rem;">${t.name}</div>
+                                <div style="font-size: 0.7rem; color: #666;">${t.memberCount} Members</div>
+                            </div>
+                        </div>
+                        <span style="color: ${isPositive ? '#4caf50' : '#f44336'}; font-weight: bold; font-family: monospace;">
+                            ${isPositive ? '+' : ''}${t.growth}%
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            initGlobalRankingChart(data.topFive);
+        });
+
+        function initGlobalRankingChart(topFive) {
+            const ctx = document.getElementById('globalRankingChart').getContext('2d');
+            if (globalRankingChart) globalRankingChart.destroy();
+
+            const chartColors = ['#ffd200', '#0064a4', '#4caf50', '#f44336', '#9c27b0'];
+
+            const datasets = topFive.map((team, i) => ({
+                label: team.name,
+                data: team.history,
+                borderColor: chartColors[i],
+                backgroundColor: chartColors[i],
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: 3,
+                fill: false
+            }));
+
+            globalRankingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(datasets[0]?.data.length || 0).fill(""),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { display: false } },
+                        y: { 
+                            grid: { color: '#222' }, 
+                            ticks: { color: '#888', callback: v => v + '%' } 
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { color: '#888', font: { size: 10 }, usePointStyle: true }
+                        }
+                    }
+                }
+            });
+        }
 
         socket.on('receive-team-message', (data) => {
             const display = document.getElementById('team-chat-display');
@@ -380,7 +477,7 @@
         });
 
         function showScreen(screenId) {
-            const screens = ['auth-container', 'lobby', 'table-browser', 'game', 'team-menu'];
+            const screens = ['auth-container', 'lobby', 'table-browser', 'game', 'team-menu', 'ranking-menu'];
             
             screens.forEach(id => {
                 const el = document.getElementById(id);
@@ -402,6 +499,9 @@
                     target.style.justifyContent = 'center'; 
                     target.style.minHeight = 'calc(100vh - 100px)';
                     handleTeamViewLogic();
+                }
+                else if (screenId === 'ranking-menu') {
+                    target.style.display = 'grid';
                 } else if (screenId === 'lobby') {
                     target.style.display = 'grid';
                 } else if (screenId === 'auth-container') {
@@ -414,7 +514,7 @@
                 if (hud) {
                     (screenId === 'game') ? hud.classList.remove('hidden') : hud.classList.add('hidden');
                 }
-            }
+        }
         
         function showPopup(message, type = 'gold') {
             const container = document.getElementById('notification-container');
