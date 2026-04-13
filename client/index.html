@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GOLDILUCKS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root { --uci-blue: #0064a4; --uci-gold: #ffd200; --dark-bg: #0f0f0f; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -133,6 +136,283 @@
             display: block;
             margin-top: 2px;
         }
+
+        /* App modal — layered glass, minimal copy */
+        #app-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 8500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(20px, 4vw);
+            background:
+                radial-gradient(ellipse 85% 70% at 50% 42%, rgba(0, 55, 105, 0.22) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 50% at 50% 100%, rgba(0, 0, 0, 0.5) 0%, transparent 45%),
+                rgba(4, 6, 10, 0.88);
+            backdrop-filter: blur(14px) saturate(1.15);
+            -webkit-backdrop-filter: blur(14px) saturate(1.15);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #app-modal-overlay.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #app-modal-card {
+            --modal-r: 22px;
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+            border-radius: var(--modal-r);
+            padding: 32px 28px 26px;
+            text-align: center;
+            isolation: isolate;
+            overflow: hidden;
+            background:
+                linear-gradient(168deg, rgba(38, 40, 48, 0.94) 0%, rgba(14, 15, 20, 0.98) 48%, rgba(10, 11, 14, 0.99) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            box-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+                0 1px 0 rgba(255, 255, 255, 0.06) inset,
+                0 32px 80px rgba(0, 0, 0, 0.75),
+                0 12px 40px rgba(0, 0, 0, 0.45);
+            transform: scale(0.92) translateY(16px);
+            opacity: 0;
+            transition:
+                transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.34s ease,
+                box-shadow 0.45s ease;
+        }
+        #app-modal-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, transparent 42%, transparent 58%, rgba(255, 255, 255, 0.02) 100%);
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.85;
+        }
+        #app-modal-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 12%;
+            right: 12%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+            z-index: 5;
+            pointer-events: none;
+        }
+        #app-modal-overlay.is-open #app-modal-card {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+        .app-modal-glow {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            border-radius: inherit;
+            background: radial-gradient(ellipse 95% 55% at 50% -8%, rgba(0, 100, 164, 0.18) 0%, transparent 52%);
+            opacity: 0.95;
+        }
+        #app-modal-card > *:not(.app-modal-glow) {
+            position: relative;
+            z-index: 2;
+        }
+        #app-modal-kicker {
+            font-size: 0.62rem;
+            letter-spacing: 0.28em;
+            color: rgba(255, 255, 255, 0.38);
+            margin-bottom: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        #app-modal-title {
+            font-size: 1.42rem;
+            font-weight: 800;
+            color: #f4f4f5;
+            line-height: 1.12;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+        #app-modal-sub {
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.52);
+            line-height: 1.4;
+            margin-bottom: 26px;
+            word-break: break-word;
+        }
+        #app-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding-top: 4px;
+        }
+        #app-modal-buttons button {
+            min-width: 118px;
+            padding: 13px 20px;
+            font-size: 0.72rem;
+            font-family: inherit;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            border-radius: 10px;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+        #app-modal-buttons button:hover {
+            transform: translateY(-1px);
+        }
+        #app-modal-buttons button:active {
+            transform: translateY(0) scale(0.98);
+        }
+        #app-modal-buttons .btn-gold {
+            border: none;
+            box-shadow:
+                0 1px 0 rgba(255, 255, 255, 0.35) inset,
+                0 4px 24px rgba(255, 210, 0, 0.22);
+        }
+        #app-modal-buttons .btn-gold:hover {
+            box-shadow:
+                0 1px 0 rgba(255, 255, 255, 0.4) inset,
+                0 8px 32px rgba(255, 210, 0, 0.32);
+        }
+        .app-modal-btn-secondary {
+            background: rgba(255, 255, 255, 0.04) !important;
+            color: rgba(255, 255, 255, 0.88) !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+        }
+        .app-modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.22) !important;
+        }
+
+        /* Win — premium reward moment */
+        #app-modal-card.app-modal--win {
+            border: 1px solid rgba(255, 210, 0, 0.45);
+            box-shadow:
+                0 0 0 1px rgba(255, 210, 0, 0.12) inset,
+                0 1px 0 rgba(255, 255, 255, 0.1) inset,
+                0 0 100px rgba(255, 210, 0, 0.14),
+                0 40px 100px rgba(0, 0, 0, 0.8);
+        }
+        #app-modal-card.app-modal--win::after {
+            height: 2px;
+            left: 8%;
+            right: 8%;
+            background: linear-gradient(90deg, transparent, rgba(255, 210, 0, 0.25), var(--uci-gold), rgba(255, 210, 0, 0.25), transparent);
+            box-shadow: 0 0 28px rgba(255, 210, 0, 0.45);
+        }
+        #app-modal-card.app-modal--win .app-modal-glow {
+            background:
+                radial-gradient(ellipse 130% 75% at 50% -35%, rgba(255, 210, 0, 0.35) 0%, transparent 52%),
+                radial-gradient(ellipse 90% 60% at 50% 115%, rgba(0, 200, 130, 0.12) 0%, transparent 45%),
+                radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255, 210, 0, 0.06) 0%, transparent 70%);
+        }
+        #app-modal-card.app-modal--win #app-modal-kicker {
+            color: rgba(255, 210, 0, 0.75);
+        }
+        #app-modal-card.app-modal--win #app-modal-title {
+            font-size: clamp(2.5rem, 10vw, 3.15rem);
+            font-weight: 900;
+            letter-spacing: 0.18em;
+            background: linear-gradient(180deg, #fff8cc 0%, var(--uci-gold) 42%, #c9a000 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 28px rgba(255, 210, 0, 0.35));
+            margin-bottom: 6px;
+            animation: app-modal-win-title 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        #app-modal-card.app-modal--win #app-modal-sub {
+            font-size: clamp(1.55rem, 5vw, 1.95rem);
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            color: #7bedc4;
+            margin-top: 8px;
+            margin-bottom: 28px;
+            text-shadow: 0 0 40px rgba(100, 230, 180, 0.35);
+        }
+        @keyframes app-modal-win-title {
+            0% { transform: scale(0.5) translateY(12px); opacity: 0; filter: blur(6px); }
+            60% { transform: scale(1.04) translateY(0); opacity: 1; filter: blur(0); }
+            100% { transform: scale(1); opacity: 1; filter: blur(0); }
+        }
+
+        /* Lose */
+        #app-modal-card.app-modal--lose {
+            border-color: rgba(120, 50, 50, 0.45);
+            box-shadow:
+                0 0 0 1px rgba(180, 60, 60, 0.08) inset,
+                0 28px 70px rgba(0, 0, 0, 0.72);
+        }
+        #app-modal-card.app-modal--lose::after {
+            background: linear-gradient(90deg, transparent, rgba(200, 80, 80, 0.35), transparent);
+            opacity: 0.7;
+        }
+        #app-modal-card.app-modal--lose .app-modal-glow {
+            background: radial-gradient(ellipse 100% 55% at 50% -15%, rgba(160, 50, 50, 0.2) 0%, transparent 50%);
+        }
+        #app-modal-card.app-modal--lose #app-modal-title {
+            font-size: clamp(1.65rem, 5vw, 2rem);
+            font-weight: 700;
+            letter-spacing: 0.42em;
+            color: rgba(255, 255, 255, 0.42);
+        }
+        #app-modal-card.app-modal--lose #app-modal-sub {
+            color: rgba(255, 255, 255, 0.28);
+            font-size: 0.78rem;
+            margin-bottom: 22px;
+        }
+
+        /* Info / success / warn / confirm */
+        #app-modal-card.app-modal--info #app-modal-title {
+            color: #5eb8ff;
+            text-shadow: 0 0 40px rgba(0, 100, 164, 0.35);
+        }
+        #app-modal-card.app-modal--success #app-modal-title {
+            color: #9be7a8;
+            text-shadow: 0 0 32px rgba(100, 200, 120, 0.2);
+        }
+        #app-modal-card.app-modal--success #app-modal-sub {
+            font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+            font-size: 1.28rem;
+            font-weight: 800;
+            color: var(--uci-gold);
+            letter-spacing: 0.12em;
+            margin-bottom: 28px;
+        }
+        #app-modal-card.app-modal--warn #app-modal-title {
+            color: #ffcc80;
+        }
+        #app-modal-card.app-modal--confirm #app-modal-title {
+            color: #ececf1;
+            font-weight: 700;
+        }
+        #app-modal-card.app-modal--confirm #app-modal-sub {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.82rem;
+            margin-bottom: 24px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #app-modal-overlay,
+            #app-modal-card,
+            #app-modal-buttons button {
+                transition-duration: 0.01ms !important;
+            }
+            #app-modal-card.app-modal--win #app-modal-title {
+                animation: none;
+            }
+        }
     </style>
 
 </head>
@@ -163,6 +443,16 @@
     </div>
 
     <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
+
+    <div id="app-modal-overlay" class="hidden" aria-modal="true" role="dialog" aria-labelledby="app-modal-title">
+        <div id="app-modal-card">
+            <div class="app-modal-glow" aria-hidden="true"></div>
+            <div id="app-modal-kicker"></div>
+            <div id="app-modal-title"></div>
+            <div id="app-modal-sub"></div>
+            <div id="app-modal-buttons"></div>
+        </div>
+    </div>
 
     <div id="player-hud" class="hidden">
         <div class="hud-left">
@@ -219,7 +509,7 @@
             <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 25px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
                 <p style="color: var(--uci-gold); font-size: 0.7rem; letter-spacing: 1.5px; margin-bottom: 20px; opacity: 0.7; flex-shrink: 0;">ACTIVE ROSTER</p>
                 <div id="member-list-ui" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; min-height: 0;"></div>
-                <button onclick="showScreen('lobby')" style="margin-top: 20px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 0.8rem; flex-shrink: 0;"><-- back to dashboard</button>
+                <button onclick="showScreen('lobby')" style="margin-top: 20px; background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 0.8rem; flex-shrink: 0;">back to dashboard</button>
             </div>
 
             <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 30px; border: 1px solid #333; display: flex; flex-direction: column; height: 100%; min-height: 0;">
@@ -267,7 +557,7 @@
                 <button style="padding: 25px; font-size: 1.3rem; width: 100%; background: rgba(0,0,0,0.3); color: #888; font-weight: bold; border-radius: 8px; border: 1px solid #444; cursor: pointer; transition: all 0.3s ease;" 
                         onmouseover="this.style.color='var(--uci-gold)'; this.style.borderColor='var(--uci-gold)'; this.style.background='rgba(255,210,0,0.05)'" 
                         onmouseout="this.style.color='#888'; this.style.borderColor='#444'; this.style.background='rgba(0,0,0,0.3)'"
-                        onclick="alert('Shop Coming Soon!')">
+                        onclick="showAppModal({ variant: 'info', title: 'Shop', sub: 'Soon.', primaryText: 'OK' })">
                     SHOP
                 </button>
 
@@ -547,7 +837,7 @@
             `;
 
             popup.innerHTML = `
-                <div style="color: ${activeColor}; font-size: 0.6rem; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold;">SYSTEM NOTIFICATION</div>
+                <div style="color: ${activeColor}; font-size: 0.6rem; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold;">NOTICE</div>
                 <div>${message}</div>
             `;
 
@@ -559,6 +849,108 @@
                 popup.style.transform = 'translateX(120%)';
                 setTimeout(() => popup.remove(), 400);
             }, 4000);
+        }
+
+        let appModalTimer = null;
+        let appModalHideTimer = null;
+        let appModalOverlayHandler = null;
+
+        function closeAppModal() {
+            const ov = document.getElementById('app-modal-overlay');
+            if (!ov) return;
+            ov.classList.remove('is-open');
+            if (appModalTimer) {
+                clearTimeout(appModalTimer);
+                appModalTimer = null;
+            }
+            if (appModalOverlayHandler) {
+                ov.removeEventListener('click', appModalOverlayHandler);
+                appModalOverlayHandler = null;
+            }
+            if (appModalHideTimer) clearTimeout(appModalHideTimer);
+            appModalHideTimer = setTimeout(() => {
+                ov.classList.add('hidden');
+                appModalHideTimer = null;
+            }, 220);
+        }
+
+        function showAppModal(opts) {
+            const ov = document.getElementById('app-modal-overlay');
+            const card = document.getElementById('app-modal-card');
+            const kickerEl = document.getElementById('app-modal-kicker');
+            const titleEl = document.getElementById('app-modal-title');
+            const subEl = document.getElementById('app-modal-sub');
+            const btnRow = document.getElementById('app-modal-buttons');
+            if (!ov || !card) return;
+
+            if (appModalHideTimer) {
+                clearTimeout(appModalHideTimer);
+                appModalHideTimer = null;
+            }
+            if (appModalTimer) {
+                clearTimeout(appModalTimer);
+                appModalTimer = null;
+            }
+            if (appModalOverlayHandler) {
+                ov.removeEventListener('click', appModalOverlayHandler);
+                appModalOverlayHandler = null;
+            }
+            ov.classList.remove('hidden');
+            ov.classList.remove('is-open');
+
+            const variantMap = { win: 'win', lose: 'lose', info: 'info', success: 'success', warn: 'warn', confirm: 'confirm' };
+            const v = variantMap[opts.variant] || 'info';
+            card.className = 'app-modal--' + v;
+
+            const kicker = opts.kicker && String(opts.kicker).trim();
+            kickerEl.textContent = kicker || '';
+            kickerEl.style.display = kicker ? 'block' : 'none';
+
+            titleEl.textContent = opts.title || '';
+            const sub = opts.sub != null && String(opts.sub).trim() !== '' ? String(opts.sub) : '';
+            subEl.textContent = sub;
+            subEl.style.display = sub ? 'block' : 'none';
+
+            btnRow.innerHTML = '';
+            const addBtn = (label, isPrimary, onClick) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = label;
+                if (isPrimary) b.className = 'btn-gold';
+                else b.className = 'app-modal-btn-secondary';
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    onClick();
+                });
+                btnRow.appendChild(b);
+            };
+
+            if (opts.secondaryText) {
+                addBtn(opts.secondaryText, false, () => {
+                    if (opts.onSecondary) opts.onSecondary();
+                    closeAppModal();
+                });
+            }
+            if (opts.primaryText) {
+                addBtn(opts.primaryText, true, () => {
+                    if (opts.onPrimary) opts.onPrimary();
+                    closeAppModal();
+                });
+            }
+
+            const dismissOnOverlay = opts.dismissOnOverlay !== false;
+            if (dismissOnOverlay) {
+                appModalOverlayHandler = (e) => {
+                    if (e.target === ov) closeAppModal();
+                };
+                ov.addEventListener('click', appModalOverlayHandler);
+            }
+
+            if (opts.autoCloseMs) {
+                appModalTimer = setTimeout(() => closeAppModal(), opts.autoCloseMs);
+            }
+
+            requestAnimationFrame(() => ov.classList.add('is-open'));
         }
 
         function handleTeamViewLogic() {
@@ -724,29 +1116,41 @@
             } 
         }
 
-        function leaveGame() { 
-            if(confirm("Return to lobby?")) {
-                socket.emit('leave-room');
-                
-                document.getElementById('my-hand').innerHTML = '';
-                document.getElementById('comm-ui').innerHTML = '';
-                document.getElementById('pot-ui').innerText = '$0';
-            }
+        function leaveGame() {
+            showAppModal({
+                variant: 'confirm',
+                title: 'Leave table?',
+                primaryText: 'LEAVE',
+                secondaryText: 'STAY',
+                dismissOnOverlay: false,
+                onPrimary: () => {
+                    socket.emit('leave-room');
+                    document.getElementById('my-hand').innerHTML = '';
+                    document.getElementById('comm-ui').innerHTML = '';
+                    document.getElementById('pot-ui').innerText = '$0';
+                }
+            });
         }
 
         function resetGraph() {
-            if (confirm("Reset graph history? (Your current balance will remain the same)")) {
-                const currentVal = parseInt(document.getElementById('lobby-bal').innerText.replace(/,/g, '')) || 10000;
-                
-                chipHistory = [currentVal];
-                localStorage.setItem('poker_history', JSON.stringify(chipHistory));
-                
-                if (performanceChart) {
-                    performanceChart.data.labels = ['Start'];
-                    performanceChart.data.datasets[0].data = chipHistory;
-                    performanceChart.update();
+            showAppModal({
+                variant: 'confirm',
+                title: 'Reset chart?',
+                sub: 'Balance unchanged.',
+                primaryText: 'RESET',
+                secondaryText: 'CANCEL',
+                dismissOnOverlay: false,
+                onPrimary: () => {
+                    const currentVal = parseInt(document.getElementById('lobby-bal').innerText.replace(/,/g, '')) || 10000;
+                    chipHistory = [currentVal];
+                    localStorage.setItem('poker_history', JSON.stringify(chipHistory));
+                    if (performanceChart) {
+                        performanceChart.data.labels = ['Start'];
+                        performanceChart.data.datasets[0].data = chipHistory;
+                        performanceChart.update();
+                    }
                 }
-            }
+            });
         }
 
         function toggleCreateModal(show) {
@@ -806,15 +1210,26 @@
             const name = document.getElementById('team-name-input').value;
             const desc = document.getElementById('team-desc-input').value;
 
-            if (!name || !desc) return alert("Please fill in all fields.");
+            if (!name || !desc) {
+                showAppModal({ variant: 'warn', title: 'Fill all fields', primaryText: 'OK' });
+                return;
+            }
 
             socket.emit('request-create-team', { name, desc });
         }
 
         socket.on('team-created', (data) => {
-            alert(`Success! Team ${data.name} created. Code: ${data.code}`);
-            toggleCreateModal(false);
-            showScreen('lobby');
+            showAppModal({
+                variant: 'success',
+                title: 'Team live',
+                sub: data.code || '—',
+                primaryText: 'OK',
+                dismissOnOverlay: false,
+                onPrimary: () => {
+                    toggleCreateModal(false);
+                    showScreen('lobby');
+                }
+            });
         });
 
         socket.on('error-msg', (msg) => showPopup(msg, 'red'));
@@ -988,8 +1403,17 @@
         });
 
         socket.on('done', (d) => {
-            const msg = d.win === socket.id ? "HAND SECURED. POT COLLECTED." : "HAND LOST.";
-            showPopup(msg, d.win === socket.id ? 'green' : 'red');
+            const won = d.win === socket.id;
+            const n = Number(d.amount);
+            const amtStr = won && Number.isFinite(n) && n > 0 ? `+$${n.toLocaleString()}` : '';
+            showAppModal({
+                variant: won ? 'win' : 'lose',
+                title: won ? 'WIN' : 'OUT',
+                sub: amtStr,
+                primaryText: 'CONTINUE',
+                autoCloseMs: 3400,
+                dismissOnOverlay: true
+            });
         });
 
         function renderCard(c) {
