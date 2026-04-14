@@ -536,13 +536,19 @@
     
             <div style="display: flex; flex-direction: column; gap: 20px;">
                 
-                <div>
-                    <div style="margin-bottom: 10px;">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="margin-bottom: 10px; flex-shrink: 0; position: relative;">
                         <h2 id="user-display" style="color: var(--uci-gold); font-size: 2.2rem; line-height: 1.2;"></h2>
                         <p style="color: #888; font-size: 0.8rem; letter-spacing: 2px;">ACCOUNT OVERVIEW</p>
+                        <button onclick="socket.disconnect(); showScreen('auth-container')" 
+                                style="background: none; border: 1px solid #444; color: #666; font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-weight: bold; position: absolute; top: 26px; right: 0;" 
+                                onmouseover="this.style.borderColor='red'; this.style.color='red'" 
+                                onmouseout="this.style.borderColor='#444'; this.style.color='#666'">
+                            LOG OUT
+                        </button>
                     </div>
 
-                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; flex-grow: 1;">
                         <div>
                             <p style="color:#888; font-size:0.6rem; letter-spacing: 1px;">TOTAL BANKROLL</p>
                             <div style="font-size: 2.2rem; color: #4caf50; font-weight: 900;">$<span id="lobby-bal">0</span></div>
@@ -557,7 +563,7 @@
                 <button style="padding: 25px; font-size: 1.3rem; width: 100%; background: rgba(0,0,0,0.3); color: #888; font-weight: bold; border-radius: 8px; border: 1px solid #444; cursor: pointer; transition: all 0.3s ease;" 
                         onmouseover="this.style.color='var(--uci-gold)'; this.style.borderColor='var(--uci-gold)'; this.style.background='rgba(255,210,0,0.05)'" 
                         onmouseout="this.style.color='#888'; this.style.borderColor='#444'; this.style.background='rgba(0,0,0,0.3)'"
-                        onclick="showAppModal({ variant: 'info', title: 'Shop', sub: 'Soon.', primaryText: 'OK' })">
+                        onclick="showAppModal({ variant: 'info', title: 'Shop', sub: 'Coming Soon.', primaryText: 'OK' })">
                     SHOP
                 </button>
 
@@ -795,7 +801,7 @@
                 } else if (screenId === 'lobby') {
                     target.style.display = 'grid';
                 } else if (screenId === 'auth-container') {
-                    target.style.display = 'flex';
+                    target.style.display = 'block';
                 } else {
                     target.style.display = 'block';
                 }
