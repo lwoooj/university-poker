@@ -495,9 +495,17 @@
         <div id="team-member-view" class="hidden" style="width: 100%; display: grid; grid-template-columns: 350px 300px 1fr; gap: 20px; align-items: stretch; height: 650px; max-height: 650px; overflow: hidden; margin-top: 20px;">
             
             <div style="display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0; overflow: hidden;">
-                <div style="padding-left: 10px; flex-shrink: 0;">
-                    <h2 id="team-title-ui" style="color: var(--uci-gold); font-size: 1.8rem; line-height: 1.1; margin-bottom: 5px;">---</h2>
-                    <p id="team-code-ui" style="color: #666; font-size: 0.7rem; letter-spacing: 2px; font-weight: bold;">CODE: ---</p>
+                <div style="padding-left: 10px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;">
+                    <div>
+                        <h2 id="team-title-ui" style="color: var(--uci-gold); font-size: 1.8rem; line-height: 1.1; margin-bottom: 5px;">---</h2>
+                        <p id="team-code-ui" style="color: #666; font-size: 0.7rem; letter-spacing: 2px; font-weight: bold;">CODE: ---</p>
+                    </div>
+                    <button onclick="confirmQuitTeam()" 
+                            style="margin-left: auto; background: none; border: 1px solid #444; color: #666; font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-weight: bold;" 
+                            onmouseover="this.style.borderColor='red'; this.style.color='red'" 
+                            onmouseout="this.style.borderColor='#444'; this.style.color='#666'">
+                        QUIT TEAM
+                    </button>
                 </div>
 
                 <div style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 20px; border: 1px solid #333; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; overflow: hidden;">
@@ -1135,6 +1143,28 @@
                 input.value = '';
             }
         }
+
+        function confirmQuitTeam() {
+            showAppModal({
+                variant: 'warn',
+                title: 'Leave Team? ',
+                sub: 'Are you sure you want to quit your current team? You can join or create another one after leaving.',
+                primaryText: 'Yes',
+                secondaryText: 'Cancel',
+                onPrimary: () => {
+                    socket.emit('quit-team');
+                    closeAppModal();
+                }
+            });
+        }
+
+        socket.on('team-left', () => {
+            myTeamCode = null;
+            const teamCodeEl = document.getElementById('team-code-ui');
+            if (teamCodeEl) teamCodeEl.innerText = 'CODE: ---';
+            handleTeamViewLogic();
+            showPopup('You have left the team.', 'gold');
+        });
 
         function login() {
             const val = document.getElementById('username-input').value;

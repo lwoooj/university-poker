@@ -339,6 +339,35 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('quit-team', async () => {
+        const user = await User.findOne({ username: socket.username });
+        if (!user || !user.teamCode) return;
+
+        const team = await Team.findOne({ code: user.teamCode });
+        user.teamCode = null;
+        await user.save();
+        socket.teamCode = null;
+
+        if (team) {
+            team.members = team.members.filter((member) => member !== socket.username);
+            if (team.members.length === 0) {
+                await Team.deleteOne({ code: team.code });
+            } else {
+                if (team.leader === socket.username) {
+                    team.leader = team.members[0];
+                }
+                await team.save();
+            }
+        }
+
+        socket.emit('team-left');
+        socket.emit('lobby-list', {
+            bankroll: user.bankroll,
+            teamCode: null,
+            list: Object.keys(rooms).map(id => ({ id, count: rooms[id].order.length }))
+        });
+    });
+
     socket.on('join-team-chat', (teamCode) => {
             if (!teamCode) return;
             socket.join(`chat_${teamCode}`);
