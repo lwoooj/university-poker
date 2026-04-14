@@ -269,36 +269,50 @@ io.on('connection', (socket) => {
     });
 
     socket.on('request-team-details', async (code) => {
-        const team = await Team.findOne({ code });
-        if (!team) return;
+        try {
+            const team = await Team.findOne({ code });
+            if (!team) return;
 
-        const members = await User.find({ username: { $in: team.members } });
+            const memberList = team.members || [];
+            const members = await User.find({ username: { $in: memberList } });
 
-        const memberData = members.map(m => {
-            const growth = (((m.bankroll / 10000) - 1) * 100).toFixed(1);
-            return {
-                username: m.username,
-                growth: growth
-            };
-        });
-    
-        const totalBankroll = members.reduce((sum, m) => sum + m.bankroll, 0);
+            const memberData = members.map(m => {
+                const bankroll = m.bankroll || 10000;
+                const growth = (((bankroll / 10000) - 1) * 100).toFixed(1);
+                return {
+                    username: m.username,
+                    growth: growth
+                };
+            });
+        
+            const totalBankroll = members.reduce((sum, m) => sum + (m.bankroll || 10000), 0);
 
-        let totalPercent = 0;
-        members.forEach(m => totalPercent += (((m.bankroll / 10000) - 1) * 100));
-        const avgGrowth = (totalPercent / members.length).toFixed(1);
+            let avgGrowth = 0;
+            if (members.length > 0) {
+                let totalPercent = 0;
+                members.forEach(m => {
+                    totalPercent += ((( (m.bankroll || 10000) / 10000) - 1) * 100);
+                });
+                avgGrowth = parseFloat((totalPercent / members.length).toFixed(1));
+            }
 
-        socket.emit('team-details-response', {
-            name: team.name,
-            code: team.code,
-            members: memberData,
-            totalBankroll,
-            growth: avgGrowth,
-            history: team.performanceHistory
-        });
+            const performanceHistory = team.performanceHistory && team.performanceHistory.length > 0 
+                ? team.performanceHistory 
+                : [0];
+
+            socket.emit('team-details-response', {
+                name: team.name,
+                code: team.code,
+                members: memberData, 
+                totalBankroll: totalBankroll,
+                growth: avgGrowth,
+                history: performanceHistory
+            });
+        } catch (err) {
+            console.error("Team Details Error:", err);
+        }
     });
 
-    // 1. Fetch all teams for the Join list
     socket.on('request-all-teams', async () => {
         const teams = await Team.find({});
         const formattedTeams = teams.map(t => ({
@@ -309,29 +323,45 @@ io.on('connection', (socket) => {
         socket.emit('all-teams-list', formattedTeams);
     });
 
-    // 2. Process a Join Request
     socket.on('request-join-team', async (code) => {
         const team = await Team.findOne({ code: code.toUpperCase() });
         const user = await User.findOne({ username: socket.username });
 
         if (!team) return socket.emit('error-msg', "Invalid Team Code.");
         if (user.teamCode) return socket.emit('error-msg', "You are already in a team.");
-        if (team.members.length >= 10) return socket.emit('error-msg', "Team is full (Max 10).");
+        if (team.members.length >= 10) return socket.emit('error-msg', "Team is full.");
 
-        // Update Team Database
         team.members.push(socket.username);
         await team.save();
 
-        // Update User Database
         user.teamCode = team.code;
         await user.save();
         
-        // Update current session
+        socket.join(team.code); 
         socket.teamCode = team.code;
 
         socket.emit('team-joined', { name: team.name, code: team.code });
+
+        const members = await User.find({ username: { $in: team.members } });
+        const memberData = members.map(m => ({
+            username: m.username,
+            growth: (((m.bankroll / 10000) - 1) * 100).toFixed(1)
+        }));
         
-        // Refresh their lobby data
+        const totalBankroll = members.reduce((sum, m) => sum + m.bankroll, 0);
+        let totalPercent = 0;
+        members.forEach(m => totalPercent += (((m.bankroll / 10000) - 1) * 100));
+        const avgGrowth = members.length ? (totalPercent / members.length).toFixed(1) : '0.0';
+
+        io.to(team.code).emit('team-details-response', {
+            name: team.name,
+            code: team.code,
+            members: memberData,
+            totalBankroll,
+            growth: avgGrowth,
+            history: team.performanceHistory || [0]
+        });
+
         socket.emit('lobby-list', { 
             bankroll: user.bankroll,
             teamCode: user.teamCode,
