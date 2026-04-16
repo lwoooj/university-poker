@@ -524,7 +524,7 @@ io.on('connection', (socket) => {
                 const updatedUser = await User.findOneAndUpdate(
                     { username: p.username }, 
                     { bankroll: p.chips },
-                    { new: true } 
+                    { returnDocument: 'after' } 
                 );
 
                 socket.emit('lobby-list', {
