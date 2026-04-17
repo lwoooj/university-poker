@@ -756,6 +756,7 @@
         let allTeams = [];
         let performanceChart;
         let teamPerformanceChart;
+        let currentMaxBetAmount = 0;
         let chipHistory = JSON.parse(localStorage.getItem('poker_history')) || [10000];
         const socket = io(window.location.origin);
 
@@ -1275,11 +1276,22 @@
         }
         
         function raise() { 
-            const amt = document.getElementById('raise-amt').value; 
-            if(amt) { 
-                socket.emit('action', { type: 'raise', amount: Number(amt) }); 
-                document.getElementById('raise-amt').value = ''; 
-            } 
+            const raiseInput = document.getElementById('raise-amt');
+            const amt = Number(raiseInput.value);
+            if (!Number.isFinite(amt) || amt <= 0) return;
+
+            if (amt > currentMaxBetAmount) {
+                showAppModal({
+                    variant: 'warn',
+                    title: 'Raise too high',
+                    sub: `Max bet is $${currentMaxBetAmount.toLocaleString()} (same as ALL IN).`,
+                    primaryText: 'OK'
+                });
+                return;
+            }
+
+            socket.emit('action', { type: 'raise', amount: amt });
+            raiseInput.value = '';
         }
 
         function leaveGame() {
@@ -1552,7 +1564,8 @@
             const minStack = activePlayers.length
                 ? Math.min(...activePlayers.map(player => player.chips + player.bet))
                 : 0;
-            document.getElementById('all-in-amt').innerText = `$${Math.max(0, minStack).toLocaleString()}`;
+            currentMaxBetAmount = Math.max(0, minStack);
+            document.getElementById('all-in-amt').innerText = `$${currentMaxBetAmount.toLocaleString()}`;
 
             // Opponent Rendering
             const opps = document.getElementById('opponents');
