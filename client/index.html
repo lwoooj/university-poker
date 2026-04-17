@@ -1412,6 +1412,84 @@
             });
         }
 
+        function isGameHotkeyContext() {
+            const gameEl = document.getElementById('game');
+            if (!gameEl || gameEl.classList.contains('hidden')) return false;
+
+            const appModal = document.getElementById('app-modal-overlay');
+            const createTeamModal = document.getElementById('create-team-modal');
+            const joinTeamModal = document.getElementById('join-team-modal');
+            const brokeTransferModal = document.getElementById('broke-transfer-modal');
+
+            const appModalOpen = appModal && !appModal.classList.contains('hidden');
+            const createOpen = createTeamModal && !createTeamModal.classList.contains('hidden');
+            const joinOpen = joinTeamModal && !joinTeamModal.classList.contains('hidden');
+            const transferOpen = brokeTransferModal && !brokeTransferModal.classList.contains('hidden');
+            return !appModalOpen && !createOpen && !joinOpen && !transferOpen;
+        }
+
+        function isTypingIntoField(target) {
+            if (!target || !(target instanceof HTMLElement)) return false;
+            if (target.isContentEditable) return true;
+            const tag = (target.tagName || '').toLowerCase();
+            return tag === 'input' || tag === 'textarea' || tag === 'select';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!isGameHotkeyContext()) return;
+
+            const target = e.target;
+            const typing = isTypingIntoField(target);
+            const raiseInput = document.getElementById('raise-amt');
+
+            // Enter should submit raise only when the amount field is active.
+            if (e.key === 'Enter' && target === raiseInput) {
+                e.preventDefault();
+                const raiseBtn = document.getElementById('raise-btn');
+                if (raiseBtn && !raiseBtn.disabled) raise();
+                return;
+            }
+
+            // Outside raise entry, avoid hijacking keystrokes while typing.
+            if (typing) return;
+            if (e.repeat) return;
+
+            const foldBtn = document.getElementById('fold-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const callBtn = document.getElementById('call-btn');
+            const allInBtn = document.getElementById('all-in-btn');
+
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                if (foldBtn && !foldBtn.disabled) act('fold');
+                return;
+            }
+            if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                if (checkBtn && !checkBtn.disabled) act('check');
+                return;
+            }
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (callBtn && !callBtn.disabled) act('call');
+                return;
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                if (raiseInput && !raiseInput.disabled) raiseInput.focus();
+                return;
+            }
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                if (allInBtn && !allInBtn.disabled) allIn();
+                return;
+            }
+            if (e.key === 'q' || e.key === 'Q') {
+                e.preventDefault();
+                leaveGame();
+            }
+        });
+
         function resetGraph() {
             showAppModal({
                 variant: 'confirm',
