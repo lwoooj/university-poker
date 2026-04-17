@@ -73,16 +73,16 @@ async function buildTeamMetrics(team) {
     const members = await User.find({ username: { $in: memberList } });
 
     const memberData = members.map((m) => {
-        const bankroll = m.bankroll || STARTING_BANKROLL;
+        const bankroll = m.bankroll ?? STARTING_BANKROLL;
         return {
             username: m.username,
             growth: toOneDecimal(getGrowthPercent(bankroll))
         };
     });
 
-    const totalBankroll = members.reduce((sum, m) => sum + (m.bankroll || STARTING_BANKROLL), 0);
+    const totalBankroll = members.reduce((sum, m) => sum + (m.bankroll ?? STARTING_BANKROLL), 0);
     const avgGrowthRaw = members.length
-        ? members.reduce((sum, m) => sum + getGrowthPercent(m.bankroll || STARTING_BANKROLL), 0) / members.length
+        ? members.reduce((sum, m) => sum + getGrowthPercent(m.bankroll ?? STARTING_BANKROLL), 0) / members.length
         : 0;
     const avgGrowth = toOneDecimal(avgGrowthRaw);
 
