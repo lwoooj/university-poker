@@ -777,6 +777,18 @@
         </div>
     </div>
 
+    <div id="broke-transfer-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2100; display:flex; align-items:center; justify-content:center;">
+        <div style="background:#1a1a1a; padding:30px; border-radius:15px; border:2px solid #f44336; width:420px; display:flex; flex-direction:column; gap:12px;">
+            <h3 style="color:#f44336; text-align:center; margin:0;">TEAM RESCUE TRANSFER</h3>
+            <p style="color:#bbb; text-align:center; margin:0;">Send chips to <span id="broke-transfer-target" style="color:var(--uci-gold); font-weight:bold;">---</span></p>
+            <input type="number" id="broke-transfer-amount" placeholder="Amount" min="1" step="1">
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn-gold" style="flex:1;" onclick="submitBrokeTransfer()">SEND</button>
+                <button style="flex:1; background:#444; color:white;" onclick="toggleBrokeTransferModal(false)">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         let myTeamCode = null;
@@ -787,6 +799,7 @@
         let teamPerformanceChart;
         let currentMaxBetAmount = 0;
         let zeroChipsModalOpen = false;
+        let brokeTransferTarget = null;
         let chipHistory = JSON.parse(localStorage.getItem('poker_history')) || [10000];
         const socket = io(window.location.origin);
 
@@ -1435,6 +1448,49 @@
             }
         }
 
+        function toggleBrokeTransferModal(show, targetUsername = '') {
+            const modal = document.getElementById('broke-transfer-modal');
+            const targetEl = document.getElementById('broke-transfer-target');
+            const amountEl = document.getElementById('broke-transfer-amount');
+            if (!modal || !targetEl || !amountEl) return;
+
+            modal.style.display = show ? 'flex' : 'none';
+            if (show) {
+                brokeTransferTarget = targetUsername;
+                targetEl.innerText = targetUsername || '---';
+                amountEl.value = '';
+                modal.classList.remove('hidden');
+                setTimeout(() => amountEl.focus(), 0);
+            } else {
+                brokeTransferTarget = null;
+                targetEl.innerText = '---';
+                amountEl.value = '';
+                modal.classList.add('hidden');
+            }
+        }
+
+        function openBrokeTransferModal(targetUsername) {
+            if (!targetUsername || targetUsername === myUsername) return;
+            toggleBrokeTransferModal(true, targetUsername);
+        }
+
+        function submitBrokeTransfer() {
+            const amountEl = document.getElementById('broke-transfer-amount');
+            if (!amountEl || !brokeTransferTarget) return;
+
+            const amount = Math.floor(Number(amountEl.value));
+            if (!Number.isFinite(amount) || amount <= 0) {
+                showPopup('Enter a valid transfer amount.', 'red');
+                return;
+            }
+
+            socket.emit('team-transfer-bankroll', {
+                toUsername: brokeTransferTarget,
+                amount
+            });
+            toggleBrokeTransferModal(false);
+        }
+
         socket.on('all-teams-list', (teams) => {
             allTeams = teams;
             renderTeamList(teams);
@@ -1502,6 +1558,12 @@
         });
 
         socket.on('error-msg', (msg) => showPopup(msg, 'red'));
+
+        socket.on('team-transfer-success', (data) => {
+            if (!data || data.teamCode !== myTeamCode) return;
+            showPopup(`${data.from} sent $${Number(data.amount).toLocaleString()} to ${data.to}`, 'gold');
+            socket.emit('request-team-details', myTeamCode);
+        });
 
         socket.on('lobby-list', (data) => {
             myTeamCode = data.teamCode;
@@ -1594,9 +1656,13 @@
                 const list = document.getElementById('member-list-ui');
                 list.innerHTML = data.members.map(m => {
                     const isPositive = parseFloat(m.growth) >= 0;
+                    const isBroke = Number(m.bankroll) <= 0;
+                    const brokeTag = (isBroke && m.username !== myUsername)
+                        ? `<button style="margin-left:8px; background:#f44336; color:white; border:none; border-radius:6px; padding:3px 8px; font-size:0.65rem; font-weight:800; letter-spacing:0.5px; cursor:pointer;" onclick='openBrokeTransferModal(${JSON.stringify(m.username)})'>BROKE</button>`
+                        : (isBroke ? `<span style="margin-left:8px; color:#f44336; font-size:0.65rem; font-weight:800; letter-spacing:0.5px;">BROKE</span>` : '');
                     return `
                         <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid #222; font-size:0.9rem; display:flex; justify-content:space-between; align-items:center;">
-                            <span>${m.username}</span>
+                            <span style="display:flex; align-items:center;">${m.username}${brokeTag}</span>
                             <div style="text-align: right;">
                                 <span style="color: ${isPositive ? '#4caf50' : '#f44336'}; font-weight: bold; font-family: monospace; font-size: 0.8rem; min-width: 55px; text-align: right; display: inline-block;">
                                     ${isPositive ? '+' : ''}${m.growth}%

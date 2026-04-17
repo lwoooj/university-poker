@@ -76,6 +76,7 @@ async function buildTeamMetrics(team) {
         const bankroll = m.bankroll ?? STARTING_BANKROLL;
         return {
             username: m.username,
+            bankroll: Math.max(0, bankroll),
             growth: toOneDecimal(getGrowthPercent(bankroll))
         };
     });
@@ -121,17 +122,57 @@ async function emitTeamAndRankingSync(teamCodes = []) {
         const team = await Team.findOne({ code });
         if (!team) return;
         const metrics = await buildTeamMetrics(team);
-        io.to(code).emit('team-details-response', {
+        const payload = {
             name: team.name,
             code: team.code,
             members: metrics.memberData,
             totalBankroll: metrics.totalBankroll,
             growth: metrics.avgGrowth,
             history: metrics.history
-        });
+        };
+
+        io.to(code).emit('team-details-response', payload);
+
+        // Also send directly to connected sockets that are in this team.
+        for (const clientSocket of io.sockets.sockets.values()) {
+            if (clientSocket.teamCode === code) {
+                clientSocket.emit('team-details-response', payload);
+            }
+        }
     }));
 
     io.emit('global-rankings-data', await getGlobalRankingsPayload());
+}
+
+function buildLobbyListPayload() {
+    return Object.keys(rooms).map(id => ({
+        id,
+        count: rooms[id].order.length,
+        status: rooms[id].status
+    }));
+}
+
+async function emitLobbySnapshotToUser(username) {
+    if (!username) return;
+    const user = await User.findOne({ username });
+    if (!user) return;
+
+    for (const clientSocket of io.sockets.sockets.values()) {
+        if (clientSocket.username !== username) continue;
+
+        clientSocket.bankroll = Math.max(0, user.bankroll || 0);
+        clientSocket.teamCode = user.teamCode || null;
+        clientSocket.emit('lobby-list', {
+            bankroll: clientSocket.bankroll,
+            teamCode: clientSocket.teamCode,
+            list: buildLobbyListPayload()
+        });
+
+        if (clientSocket.roomId && rooms[clientSocket.roomId] && rooms[clientSocket.roomId].players[clientSocket.id]) {
+            rooms[clientSocket.roomId].players[clientSocket.id].chips = clientSocket.bankroll;
+            io.to(clientSocket.roomId).emit('update', rooms[clientSocket.roomId]);
+        }
+    }
 }
 
 async function takeTeamSnapshots() {
@@ -431,6 +472,72 @@ io.on('connection', (socket) => {
 
             io.to(`chat_${data.teamCode}`).emit('receive-team-message', chatPayload);
         });
+
+    socket.on('team-transfer-bankroll', async (payload) => {
+        try {
+            const toUsername = payload && typeof payload.toUsername === 'string' ? payload.toUsername.trim() : '';
+            const amount = Math.floor(Number(payload && payload.amount));
+
+            if (!socket.username) return socket.emit('error-msg', 'Login required.');
+            if (!toUsername) return socket.emit('error-msg', 'Invalid recipient.');
+            if (toUsername === socket.username) return socket.emit('error-msg', 'You cannot transfer to yourself.');
+            if (!Number.isFinite(amount) || amount <= 0) return socket.emit('error-msg', 'Enter a valid transfer amount.');
+
+            const [sender, recipient] = await Promise.all([
+                User.findOne({ username: socket.username }),
+                User.findOne({ username: toUsername })
+            ]);
+
+            if (!sender || !recipient) return socket.emit('error-msg', 'Player not found.');
+            if (!sender.teamCode || sender.teamCode !== recipient.teamCode) {
+                return socket.emit('error-msg', 'Transfer allowed only between teammates.');
+            }
+
+            const team = await Team.findOne({ code: sender.teamCode });
+            if (!team) return socket.emit('error-msg', 'Team not found.');
+            if (!team.members.includes(sender.username) || !team.members.includes(recipient.username)) {
+                return socket.emit('error-msg', 'Both players must be active team members.');
+            }
+
+            if ((recipient.bankroll || 0) > 0) {
+                return socket.emit('error-msg', 'This rescue transfer is only for BROKE teammates.');
+            }
+            if ((sender.bankroll || 0) < amount) {
+                return socket.emit('error-msg', 'Insufficient bankroll for this transfer.');
+            }
+
+            sender.bankroll = Math.max(0, (sender.bankroll || 0) - amount);
+            recipient.bankroll = Math.max(0, (recipient.bankroll || 0) + amount);
+            await Promise.all([sender.save(), recipient.save()]);
+
+            await Promise.all([
+                emitTeamAndRankingSync([sender.teamCode]),
+                emitLobbySnapshotToUser(sender.username),
+                emitLobbySnapshotToUser(recipient.username)
+            ]);
+
+            io.to(`chat_${sender.teamCode}`).emit('receive-team-message', {
+                sender: 'SYSTEM',
+                text: `${sender.username} sent $${amount.toLocaleString()} to ${recipient.username}.`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            const transferNotice = {
+                teamCode: sender.teamCode,
+                from: sender.username,
+                to: recipient.username,
+                amount
+            };
+            for (const clientSocket of io.sockets.sockets.values()) {
+                if (clientSocket.teamCode === sender.teamCode) {
+                    clientSocket.emit('team-transfer-success', transferNotice);
+                }
+            }
+        } catch (err) {
+            console.error('Team Transfer Error:', err);
+            socket.emit('error-msg', 'Transfer failed. Please try again.');
+        }
+    });
 
     function joinRoom(socket, roomId) {
         socket.join(roomId);
