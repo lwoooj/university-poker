@@ -921,6 +921,7 @@
         let currentMaxBetAmount = 0;
         let zeroChipsModalOpen = false;
         let brokeTransferTarget = null;
+        let isExiting = false;
         let chipHistory = JSON.parse(localStorage.getItem('poker_history')) || [10000];
         const socket = io(window.location.origin);
 
@@ -1662,6 +1663,7 @@
 
         function leaveGame(force = false) {
             if (force) {
+                isExiting = true;
                 socket.emit('leave-room');
                 document.getElementById('my-hand').innerHTML = '';
                 document.getElementById('comm-ui').innerHTML = '';
@@ -1915,6 +1917,7 @@
         });
 
         socket.on('lobby-list', (data) => {
+            isExiting = false;
             myTeamCode = data.teamCode;
             const lobbyBalEl = document.getElementById('lobby-bal');
             if (lobbyBalEl) {
@@ -2012,8 +2015,9 @@
 
         socket.on('update', (room) => {
             // Hide Lobby, Show Game
+            if (isExiting) return;
             showScreen('game');
-            
+
             const me = room.players[socket.id];
             if(!me) return;
 
@@ -2099,9 +2103,12 @@
         });
 
         socket.on('back-to-lobby', () => { 
+            isExiting = true;
             zeroChipsModalOpen = false;
             showScreen('lobby');
             console.log("Returned to lobby by server.");
+            document.getElementById('pot-ui').innerText = '$0';
+            document.getElementById('comm-ui').innerHTML = '';
         });
 
         socket.on('receive-cards', (cards) => { 
@@ -2109,6 +2116,7 @@
         });
 
         socket.on('done', (d) => {
+            if (isExiting) return;
             const won = d.win === socket.id;
             const n = Number(d.amount);
             const amtStr = won && Number.isFinite(n) && n > 0 ? `+$${n.toLocaleString()}` : '';

@@ -794,12 +794,16 @@ io.on('connection', (socket) => {
             rooms[roomId].order = rooms[roomId].order.filter(id => id !== socket.id);
             delete rooms[roomId].players[socket.id];
 
+            socket.leave(roomId);
+            socket.roomId = null; 
+
             if (rooms[roomId].order.length === 0) {
                 delete rooms[roomId];
                 broadcastLobbyList();
             } else {
                 io.to(roomId).emit('update', rooms[roomId]);
             }
+
             socket.emit('back-to-lobby');
         }
     });
