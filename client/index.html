@@ -1878,11 +1878,11 @@
             });
 
         socket.on('update', (room) => {
-            // Hide Lobby, Show Game
-            showScreen('game');
-            
             const me = room.players[socket.id];
-            if(!me) return;
+            if (!me) return; // not in this room — ignore (e.g. just left)
+
+            // Only now is it safe to show the game screen
+            showScreen('game');
 
             const handFinished = room.status !== 'playing';
             if (handFinished && me.chips <= 0 && !zeroChipsModalOpen) {
