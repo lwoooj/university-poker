@@ -10,7 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root { --uci-blue: #0064a4; --uci-gold: #ffd200; --dark-bg: #0a0a0a; --panel-bg: #0a0a0a; --panel-border: #1a1a1a; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes revolver-spin {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         body { background: var(--dark-bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
         .hidden { display: none !important; }
 
@@ -585,7 +588,7 @@
     </style>
 
 </head>
-    <link rel="icon" type="image/png" href="logo2.png">
+    <link rel="icon" type="image/png" href="asset/logo2.png">
 
 <body>
     <div id="ranking-menu" class="hidden" style="margin-top: 60px; width: 98%; max-width: 1600px; display: grid; grid-template-columns: 380px 1fr; gap: 25px; height: 80vh; padding: 20px; box-sizing: border-box;">
@@ -650,7 +653,7 @@
     </div>
 
     <div id="auth-container">
-        <img src="logo.png" alt="Goldilucks Logo" id="login-logo">
+        <img src="asset/logo.png" alt="Goldilucks Logo" id="login-logo">
         <h2 style="color: var(--uci-gold); margin-bottom: 20px;"></h2>
         <input type="text" id="username-input" placeholder="Username">
         <button class="btn-gold" style="width:100%" onclick="login()">ENTER GAME</button>
@@ -821,9 +824,12 @@
             <h2 style="font-size: 1.6rem; font-weight: 900; color: white; margin: 0;">FINDING A TABLE</h2>
         </div>
 
-        <!-- Player pip grid -->
-        <div id="queue-pips" style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; width: 100%;">
-            <!-- filled by JS -->
+        <!-- Revolver logo -->
+        <div style="margin: 8px 0;">
+            <img id="revolver-img"
+                 src="asset/bullet1.png"
+                 alt="Players joined"
+                 style="width: 180px; height: 180px; object-fit: contain; opacity: 0; transition: opacity 0.35s ease; display: block; margin: 0 auto;" />
         </div>
 
         <div style="width: 100%;">
@@ -1588,6 +1594,14 @@
         function joinQueue() {
             socket.emit('join-queue');
             showScreen('matchmaking');
+            // Reset revolver image
+            const img = document.getElementById('revolver-img');
+            if (img) {
+                img.style.transition = 'opacity 0.35s ease';
+                img.style.transform = 'rotate(0deg)';
+                img.src = 'asset/bullet1.png';
+                img.style.opacity = '0';
+            }
             updateQueueUI(0);
             startQueueDots();
         }
@@ -1614,22 +1628,28 @@
             const total = 6;
             const countEl = document.getElementById('queue-count-text');
             const barEl = document.getElementById('queue-bar');
-            const pipsEl = document.getElementById('queue-pips');
+            const img = document.getElementById('revolver-img');
+
             if (countEl) countEl.innerText = `${count} / ${total}`;
             if (barEl) barEl.style.width = `${(count / total) * 100}%`;
-            if (pipsEl) {
-                pipsEl.innerHTML = Array.from({ length: total }, (_, i) => {
-                    const filled = i < count;
-                    return `<div style="
-                        width: 44px; height: 44px; border-radius: 50%;
-                        border: 2px solid ${filled ? 'var(--uci-gold)' : '#333'};
-                        background: ${filled ? 'rgba(255,210,0,0.15)' : 'rgba(255,255,255,0.02)'};
-                        transition: all 0.3s ease;
-                        display: flex; align-items: center; justify-content: center;
-                    ">
-                        ${filled ? `<div style="width:16px;height:16px;border-radius:50%;background:var(--uci-gold);opacity:0.9;"></div>` : ''}
-                    </div>`;
-                }).join('');
+
+            if (img) {
+                if (count === 0) {
+                    // Hide image before first player joins
+                    img.style.opacity = '0';
+                } else {
+                    const next = `asset/bullet${count}.png`;
+                    if (img.getAttribute('src') !== next) {
+                        // Fade out, swap src, fade back in
+                        img.style.opacity = '0';
+                        setTimeout(() => {
+                            img.src = next;
+                            img.style.opacity = '1';
+                        }, 180);
+                    } else {
+                        img.style.opacity = '1';
+                    }
+                }
             }
         }
 
@@ -1639,6 +1659,20 @@
 
         socket.on('match-found', () => {
             if (queueDotsTimer) clearInterval(queueDotsTimer);
+            const dotsEl = document.getElementById('queue-dots');
+            if (dotsEl) dotsEl.innerText = 'MATCH FOUND';
+            const img = document.getElementById('revolver-img');
+            if (img) {
+                // Make sure bullet6 is showing, then spin once before game loads
+                img.src = 'asset/bullet6.png';
+                img.style.opacity = '1';
+                img.style.transition = 'opacity 0.35s ease';
+                // Short delay so the image renders, then spin
+                setTimeout(() => {
+                    img.style.transition = 'opacity 0.35s ease, transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)';
+                    img.style.transform = 'rotate(360deg)';
+                }, 50);
+            }
             // Game screen transition is handled by the existing 'update' event from the server
         });
         // ─────────────────────────────────────────────────────────────
