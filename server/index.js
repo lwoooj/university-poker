@@ -17,8 +17,8 @@ app.use(express.static(path.join(__dirname, '..', 'client')));
 
 const MONGO_URI = process.env.MONGO_URI;
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected"))
-    .catch(err => console.error("❌ MongoDB Error:", err));
+    .then(() => console.log("MongoDB Connected"))
+    .catch(err => console.error("MongoDB Error:", err));
 
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
@@ -90,30 +90,43 @@ function historyToClient(points) {
 
 async function syncTeamPerformanceHistory(team, currentGrowth, intervalMs) {
     const growth = toOneDecimal(currentGrowth);
-    let points = normalizePerformanceHistory(team.performanceHistory);
     const now = Date.now();
 
-    if (points.length === 0) {
-        points.push({ at: new Date(now), value: growth });
-    } else {
-        const last = points[points.length - 1];
-        const lastAt = new Date(last.at).getTime();
-        if (now - lastAt >= intervalMs) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const fresh = attempt === 0 ? team : await Team.findById(team._id);
+        if (!fresh) break;
+
+        let points = normalizePerformanceHistory(fresh.performanceHistory);
+
+        if (points.length === 0) {
             points.push({ at: new Date(now), value: growth });
         } else {
-            points[points.length - 1] = { at: last.at, value: growth };
+            const last = points[points.length - 1];
+            const lastAt = new Date(last.at).getTime();
+            if (now - lastAt >= intervalMs) {
+                points.push({ at: new Date(now), value: growth });
+            } else {
+                points[points.length - 1] = { at: last.at, value: growth };
+            }
+        }
+
+        while (points.length > MAX_HISTORY_POINTS) points.shift();
+
+        const newHistory = points.map((p) => ({
+            at: p.at instanceof Date ? p.at : new Date(p.at),
+            value: typeof p.value === 'number' ? p.value : parseFloat(p.value)
+        }));
+
+        try {
+            await Team.findByIdAndUpdate(fresh._id, { $set: { performanceHistory: newHistory } });
+            return points;
+        } catch (err) {
+            if (attempt < 2) continue;
+            throw err;
         }
     }
 
-    while (points.length > MAX_HISTORY_POINTS) points.shift();
-
-    team.performanceHistory = points.map((p) => ({
-        at: p.at instanceof Date ? p.at : new Date(p.at),
-        value: typeof p.value === 'number' ? p.value : parseFloat(p.value)
-    }));
-
-    await team.save();
-    return points;
+    return normalizePerformanceHistory(team.performanceHistory);
 }
 
 function parseGraphIntervalMs(payload) {
