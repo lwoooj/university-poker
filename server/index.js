@@ -570,7 +570,6 @@ io.on('connection', (socket) => {
     socket.on('join-team-chat', (teamCode) => {
             if (!teamCode) return;
             socket.join(`chat_${teamCode}`);
-            console.log(`${socket.username} joined chat for ${teamCode}`);
         });
 
         socket.on('send-team-message', (data) => {
